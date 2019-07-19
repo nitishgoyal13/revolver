@@ -160,6 +160,11 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>com.alibaba.csp</groupId>
+            <artifactId>sentinel-core</artifactId>
+            <version>1.6.1</version>
+        </dependency>
+        <dependency>
             <groupId>org.hystrix</groupId>
             <artifactId>hystrix-codahale-metrics-publisher</artifactId>
             <version>${hystrix.version}.3-SNAPSHOT</version>

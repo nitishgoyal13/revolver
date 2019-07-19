@@ -20,6 +20,7 @@ package io.dropwizard.revolver.http.config;
 import io.dropwizard.revolver.core.config.ApiLatencyConfig;
 import io.dropwizard.revolver.core.config.CommandHandlerConfig;
 import io.dropwizard.revolver.core.config.HystrixCommandConfig;
+import io.dropwizard.revolver.core.model.RevolverExecutorType;
 import io.dropwizard.revolver.retry.RevolverApiRetryConfig;
 import io.dropwizard.revolver.splitting.RevolverHttpApiSplitConfig;
 import java.util.Collections;
@@ -62,6 +63,8 @@ public class RevolverHttpApiConfig extends CommandHandlerConfig {
     private RevolverHttpApiSplitConfig splitConfig;
 
     private ApiLatencyConfig apiLatencyConfig;
+
+    private RevolverExecutorType revolverExecutorType = RevolverExecutorType.HYSTRIX;
 
     @NotNull
     @NotEmpty

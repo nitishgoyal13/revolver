@@ -83,7 +83,7 @@ public class RevolverHttpCommand extends
     }
 
     @Override
-    protected RevolverHttpResponse execute(RevolverHttpContext context,
+    public RevolverHttpResponse execute(RevolverHttpContext context,
             RevolverHttpRequest request) throws Exception {
         Preconditions.checkNotNull(client);
         RevolverHttpApiConfig apiConfig = getApiConfiguration();

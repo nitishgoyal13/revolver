@@ -55,7 +55,7 @@ public class RevolverExceptionMapper implements ExceptionMapper<RevolverExceptio
         Map response = ImmutableMap.builder().put("errorCode", exception.getErrorCode())
                 .put("message", exception.getMessage()).build();
         try {
-            if (headers.getAcceptableMediaTypes().size() == 0) {
+            if (headers.getAcceptableMediaTypes().isEmpty()) {
                 return Response.ok(ResponseTransformationUtil
                         .transform(response, MediaType.APPLICATION_JSON, jsonObjectMapper,
                                 msgPackObjectMapper), MediaType.APPLICATION_JSON).build();

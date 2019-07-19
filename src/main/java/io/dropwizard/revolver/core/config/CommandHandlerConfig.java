@@ -17,6 +17,7 @@
 
 package io.dropwizard.revolver.core.config;
 
+import io.dropwizard.revolver.core.config.sentinel.SentinelCommandConfig;
 import javax.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -40,6 +41,8 @@ public class CommandHandlerConfig {
     private boolean sharedPool = false;
 
     private HystrixCommandConfig runtime = new HystrixCommandConfig();
+
+    private SentinelCommandConfig sentinelRunTime = new SentinelCommandConfig();
 
 
 }

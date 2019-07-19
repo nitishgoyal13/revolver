@@ -94,12 +94,13 @@ import org.msgpack.jackson.dataformat.MessagePackFactory;
 @Slf4j
 public abstract class RevolverBundle<T extends Configuration> implements ConfiguredBundle<T> {
 
-    public static final ObjectMapper msgPackObjectMapper = new ObjectMapper(
+    public static final ObjectMapper MSG_PACK_OBJECT_MAPPER = new ObjectMapper(
             new MessagePackFactory());
+    public static final Map<String, Boolean> API_STATUS = new ConcurrentHashMap<>();
+
     public static RevolverServiceResolver serviceNameResolver = null;
-    public static ConcurrentHashMap<String, Boolean> apiStatus = new ConcurrentHashMap<>();
-    private static ConcurrentHashMap<String, RevolverHttpServiceConfig> serviceConfig = new ConcurrentHashMap<>();
-    private static ConcurrentHashMap<String, RevolverHttpApiConfig> apiConfig = new ConcurrentHashMap<>();
+    private static Map<String, RevolverHttpServiceConfig> serviceConfig = new ConcurrentHashMap<>();
+    private static Map<String, RevolverHttpApiConfig> apiConfig = new ConcurrentHashMap<>();
     private static MultivaluedMap<String, ApiPathMap> serviceToPathMap = new MultivaluedHashMap<>();
     private static Map<String, Integer> serviceConnectionPoolMap = new ConcurrentHashMap<>();
 
@@ -169,14 +170,6 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
                 .serviceConfiguration(serviceConfig.get(service)).build();
     }
 
-    private static RevolverHttpCommand getTestHttpCommand(RevolverHttpServiceConfig serviceConfig) {
-        return RevolverHttpCommand.builder().apiConfiguration(RevolverHttpApiConfig.configBuilder()
-                .method(RevolverHttpApiConfig.RequestMethod.GET).api("test").path("/").build())
-                .clientConfiguration(revolverConfig.getClientConfig())
-                .runtimeConfig(revolverConfig.getGlobal()).serviceConfiguration(serviceConfig)
-                .build();
-    }
-
     public static RevolverServiceResolver getServiceNameResolver() {
         return serviceNameResolver;
     }
@@ -235,7 +228,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
             ((RevolverHttpServiceConfig) config).getApis().forEach(a -> {
                 String key = config.getService() + "." + a.getApi();
-                apiStatus.put(key, true);
+                API_STATUS.put(key, true);
                 apiConfig.put(key, a);
                 if (a.getRuntime() != null && a.getRuntime().getThreadPool() != null) {
                     a.getRuntime().getThreadPool()
@@ -274,25 +267,6 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         }
     }
 
-    private static void registerHttpCommand(RevolverServiceConfig config) {
-        RevolverHttpServiceConfig httpConfig = (RevolverHttpServiceConfig) config;
-        httpConfig.setSecured(false);
-        registerCommand(config, httpConfig);
-
-        if (serviceConfig.containsKey(httpConfig.getService())) {
-            serviceConfig.put(config.getService(), httpConfig);
-            if (serviceConnectionPoolMap.get(httpConfig.getService()) != null
-                    && !serviceConnectionPoolMap.get(httpConfig.getService())
-                    .equals(((RevolverHttpServiceConfig) config).getConnectionPoolSize())) {
-                RevolverHttpClientFactory.refreshClient(httpConfig);
-            }
-        } else {
-            serviceConfig.put(config.getService(), httpConfig);
-        }
-        serviceConnectionPoolMap.put(httpConfig.getService(), httpConfig.getConnectionPoolSize());
-
-    }
-
     public static void addHttpCommand(RevolverHttpServiceConfig config) {
         if (!serviceConfig.containsKey(config.getService())) {
             serviceConfig.put(config.getService(), config);
@@ -300,7 +274,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         }
     }
 
-    public static ConcurrentHashMap<String, RevolverHttpServiceConfig> getServiceConfig() {
+    public static Map<String, RevolverHttpServiceConfig> getServiceConfig() {
         return serviceConfig;
     }
 
@@ -342,7 +316,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
                     revolverConfig.getHystrixStreamPath());
         }
         environment.jersey().register(
-                new RevolverExceptionMapper(environment.getObjectMapper(), msgPackObjectMapper));
+                new RevolverExceptionMapper(environment.getObjectMapper(), MSG_PACK_OBJECT_MAPPER));
         environment.jersey().register(new TimeoutExceptionMapper(environment.getObjectMapper()));
 
         PersistenceProvider persistenceProvider = getPersistenceProvider(configuration,
@@ -383,13 +357,13 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         environment.jersey().register(new RevolverRequestFilter(revolverConfig));
 
         environment.jersey().register(
-                new RevolverRequestResource(environment.getObjectMapper(), msgPackObjectMapper,
+                new RevolverRequestResource(environment.getObjectMapper(), MSG_PACK_OBJECT_MAPPER,
                         persistenceProvider, callbackHandler, metrics, revolverConfig));
         environment.jersey()
                 .register(new RevolverCallbackResource(persistenceProvider, callbackHandler));
         environment.jersey().register(
                 new RevolverMailboxResource(persistenceProvider, environment.getObjectMapper(),
-                        msgPackObjectMapper, Collections.unmodifiableMap(apiConfig)));
+                        MSG_PACK_OBJECT_MAPPER, Collections.unmodifiableMap(apiConfig)));
         environment.jersey().register(new RevolverMetadataResource(revolverConfig));
 
         DynamicConfigHandler dynamicConfigHandler = new DynamicConfigHandler(
@@ -474,4 +448,23 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         return serviceToPathMap;
     }
 
+
+    private static void registerHttpCommand(RevolverServiceConfig config) {
+        RevolverHttpServiceConfig httpConfig = (RevolverHttpServiceConfig) config;
+        httpConfig.setSecured(false);
+        registerCommand(config, httpConfig);
+
+        if (serviceConfig.containsKey(httpConfig.getService())) {
+            serviceConfig.put(config.getService(), httpConfig);
+            if (serviceConnectionPoolMap.get(httpConfig.getService()) != null
+                    && !serviceConnectionPoolMap.get(httpConfig.getService())
+                    .equals(((RevolverHttpServiceConfig) config).getConnectionPoolSize())) {
+                RevolverHttpClientFactory.refreshClient(httpConfig);
+            }
+        } else {
+            serviceConfig.put(config.getService(), httpConfig);
+        }
+        serviceConnectionPoolMap.put(httpConfig.getService(), httpConfig.getConnectionPoolSize());
+
+    }
 }
