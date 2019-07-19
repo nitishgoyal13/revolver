@@ -106,178 +106,6 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
     private static RevolverConfig revolverConfig;
 
-    private static Map<String, RevolverHttpApiConfig> generateApiConfigMap(
-            RevolverHttpServiceConfig serviceConfiguration) {
-        val tokenMatch = Pattern.compile("\\{(([^/])+\\})");
-        List<RevolverHttpApiConfig> apis = new ArrayList<>(serviceConfiguration.getApis());
-        apis.sort((o1, o2) -> {
-            String o1Expr = generatePathExpression(o1.getPath());
-            String o2Expr = generatePathExpression(o2.getPath());
-            return tokenMatch.matcher(o2Expr).groupCount() - tokenMatch.matcher(o1Expr)
-                    .groupCount();
-        });
-        apis.sort(Comparator.comparing(RevolverHttpApiConfig::getPath));
-        apis.forEach(apiConfig -> {
-            ApiPathMap apiPathMap = ApiPathMap.builder().api(apiConfig)
-                    .path(generatePathExpression(apiConfig.getPath())).build();
-            //Update
-            int elementIndex = serviceToPathMap
-                    .getOrDefault(serviceConfiguration.getService(), Collections.emptyList())
-                    .indexOf(apiPathMap);
-            if (elementIndex == -1) {
-                serviceToPathMap.add(serviceConfiguration.getService(), apiPathMap);
-            } else {
-                serviceToPathMap.get(serviceConfiguration.getService())
-                        .set(elementIndex, apiPathMap);
-            }
-        });
-        ImmutableMap.Builder<String, RevolverHttpApiConfig> configMapBuilder = ImmutableMap
-                .builder();
-        apis.forEach(apiConfig -> configMapBuilder.put(apiConfig.getApi(), apiConfig));
-        return configMapBuilder.build();
-    }
-
-    private static String generatePathExpression(String path) {
-        if (Strings.isNullOrEmpty(path)) {
-            return "";
-        }
-        return path.replaceAll("\\{(([^/])+\\})", "(([^/])+)");
-    }
-
-    public static ApiPathMap matchPath(String service, String path) {
-        if (serviceToPathMap.containsKey(service)) {
-            val apiMap = serviceToPathMap.get(service).stream()
-                    .filter(api -> path.matches(api.getPath())).findFirst();
-            return apiMap.orElse(null);
-        } else {
-            return null;
-        }
-    }
-
-    public static RevolverHttpCommand getHttpCommand(String service, String api) {
-        if (!serviceConfig.containsKey(service)) {
-            throw new RevolverExecutionException(RevolverExecutionException.Type.BAD_REQUEST,
-                    "No service spec defined for service: " + service);
-        }
-        String serviceKey = service + "." + api;
-        if (!apiConfig.containsKey(serviceKey)) {
-            throw new RevolverExecutionException(RevolverExecutionException.Type.BAD_REQUEST,
-                    "No api spec defined for service: " + service);
-        }
-        return RevolverHttpCommand.builder().apiConfiguration(apiConfig.get(serviceKey))
-                .clientConfiguration(revolverConfig.getClientConfig())
-                .runtimeConfig(revolverConfig.getGlobal())
-                .serviceConfiguration(serviceConfig.get(service)).build();
-    }
-
-    public static RevolverServiceResolver getServiceNameResolver() {
-        return serviceNameResolver;
-    }
-
-    public static void loadServiceConfiguration(RevolverConfig revolverConfig) {
-        for (RevolverServiceConfig config : revolverConfig.getServices()) {
-            String type = config.getType();
-            switch (type) {
-                case "http":
-                    registerHttpCommand(config);
-                    break;
-                case "https":
-                    registerHttpsCommand(config);
-                    break;
-                default:
-                    log.warn("Unsupported Service type: " + type);
-
-            }
-        }
-    }
-
-    private static void registerHttpsCommand(RevolverServiceConfig config) {
-        RevolverHttpsServiceConfig httpsConfig = (RevolverHttpsServiceConfig) config;
-        RevolverHttpServiceConfig revolverHttpServiceConfig = RevolverHttpServiceConfig.builder()
-                .apis(httpsConfig.getApis()).auth(httpsConfig.getAuth())
-                .authEnabled(httpsConfig.isAuthEnabled()).compression(httpsConfig.isCompression())
-                .connectionKeepAliveInMillis(httpsConfig.getConnectionKeepAliveInMillis())
-                .connectionPoolSize(httpsConfig.getConnectionPoolSize())
-                .enpoint(httpsConfig.getEndpoint())
-                .keystorePassword(httpsConfig.getKeystorePassword())
-                .keyStorePath(httpsConfig.getKeyStorePath()).secured(true)
-                .service(httpsConfig.getService()).trackingHeaders(httpsConfig.isTrackingHeaders())
-                .type(httpsConfig.getType()).build();
-        registerCommand(config, revolverHttpServiceConfig);
-    }
-
-    private static void registerCommand(RevolverServiceConfig config,
-            RevolverHttpServiceConfig revolverHttpServiceConfig) {
-        if (config instanceof RevolverHttpServiceConfig) {
-            //Adjust connectionPool size to make sure we don't starve connections. Guard against misconfiguration
-            //1. Add concurrency from thread pool groups
-            //2. Add concurrency from apis which do not belong to any thread pool group
-            int totalConcurrency = 0;
-            if (config.getThreadPoolGroupConfig() != null) {
-                totalConcurrency = config.getThreadPoolGroupConfig().getThreadPools().stream()
-                        .mapToInt(ThreadPoolConfig::getConcurrency).sum();
-                config.getThreadPoolGroupConfig().getThreadPools()
-                        .forEach(a -> a.setInitialConcurrency(a.getConcurrency()));
-            }
-            totalConcurrency += ((RevolverHttpServiceConfig) config).getApis().stream()
-                    .filter(a -> Strings
-                            .isNullOrEmpty(a.getRuntime().getThreadPool().getThreadPoolName()))
-                    .mapToInt(a -> a.getRuntime().getThreadPool().getConcurrency()).sum();
-
-            ((RevolverHttpServiceConfig) config).setConnectionPoolSize(totalConcurrency);
-
-            ((RevolverHttpServiceConfig) config).getApis().forEach(a -> {
-                String key = config.getService() + "." + a.getApi();
-                API_STATUS.put(key, true);
-                apiConfig.put(key, a);
-                if (a.getRuntime() != null && a.getRuntime().getThreadPool() != null) {
-                    a.getRuntime().getThreadPool()
-                            .setInitialConcurrency(a.getRuntime().getThreadPool().getConcurrency());
-                }
-                if (null != a.getSplitConfig() && a.getSplitConfig().isEnabled()) {
-                    updateSplitConfig(a);
-                    if (CollectionUtils
-                            .isNotEmpty(a.getSplitConfig().getPathExpressionSplitConfigs())) {
-
-                        List<PathExpressionSplitConfig> sortedOnOrder = a.getSplitConfig()
-                                .getPathExpressionSplitConfigs().stream()
-                                .sorted(Comparator.comparing(PathExpressionSplitConfig::getOrder))
-                                .collect(Collectors.toList());
-                        a.getSplitConfig().setPathExpressionSplitConfigs(sortedOnOrder);
-                    }
-                }
-
-            });
-            generateApiConfigMap((RevolverHttpServiceConfig) config);
-            serviceNameResolver.register(revolverHttpServiceConfig.getEndpoint());
-        }
-    }
-
-    private static void updateSplitConfig(RevolverHttpApiConfig apiConfig) {
-        double from = 0.0;
-        for (SplitConfig splitConfig : CollectionUtils
-                .nullSafeList(apiConfig.getSplitConfig().getSplits())) {
-            double wrr = splitConfig.getWrr();
-            splitConfig.setFrom(from);
-            from += wrr;
-            splitConfig.setTo(from);
-        }
-        if (from > 1.0) {
-            throw new RuntimeException("wrr of split api is exceeding weight of 1");
-        }
-    }
-
-    public static void addHttpCommand(RevolverHttpServiceConfig config) {
-        if (!serviceConfig.containsKey(config.getService())) {
-            serviceConfig.put(config.getService(), config);
-            registerCommand(config, config);
-        }
-    }
-
-    public static Map<String, RevolverHttpServiceConfig> getServiceConfig() {
-        return serviceConfig;
-    }
-
     @Override
     public void initialize(Bootstrap<?> bootstrap) {
         //Reset everything before configuration
@@ -427,6 +255,142 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
     public abstract CuratorFramework getCurator();
 
+
+    public static ApiPathMap matchPath(String service, String path) {
+        if (serviceToPathMap.containsKey(service)) {
+            val apiMap = serviceToPathMap.get(service).stream()
+                    .filter(api -> path.matches(api.getPath())).findFirst();
+            return apiMap.orElse(null);
+        } else {
+            return null;
+        }
+    }
+
+    public static RevolverHttpCommand getHttpCommand(String service, String api) {
+        if (!serviceConfig.containsKey(service)) {
+            throw new RevolverExecutionException(RevolverExecutionException.Type.BAD_REQUEST,
+                    "No service spec defined for service: " + service);
+        }
+        String serviceKey = service + "." + api;
+        if (!apiConfig.containsKey(serviceKey)) {
+            throw new RevolverExecutionException(RevolverExecutionException.Type.BAD_REQUEST,
+                    "No api spec defined for service: " + service);
+        }
+        return RevolverHttpCommand.builder().apiConfiguration(apiConfig.get(serviceKey))
+                .clientConfiguration(revolverConfig.getClientConfig())
+                .runtimeConfig(revolverConfig.getGlobal())
+                .serviceConfiguration(serviceConfig.get(service)).build();
+    }
+
+    public static RevolverServiceResolver getServiceNameResolver() {
+        return serviceNameResolver;
+    }
+
+    public static void loadServiceConfiguration(RevolverConfig revolverConfig) {
+        for (RevolverServiceConfig config : revolverConfig.getServices()) {
+            String type = config.getType();
+            switch (type) {
+                case "http":
+                    registerHttpCommand(config);
+                    break;
+                case "https":
+                    registerHttpsCommand(config);
+                    break;
+                default:
+                    log.warn("Unsupported Service type: " + type);
+
+            }
+        }
+    }
+
+    public static Map<String, RevolverHttpServiceConfig> getServiceConfig() {
+        return serviceConfig;
+    }
+
+    public static void addHttpCommand(RevolverHttpServiceConfig config) {
+        if (!serviceConfig.containsKey(config.getService())) {
+            serviceConfig.put(config.getService(), config);
+            registerCommand(config, config);
+        }
+    }
+
+
+    private static void registerHttpsCommand(RevolverServiceConfig config) {
+        RevolverHttpsServiceConfig httpsConfig = (RevolverHttpsServiceConfig) config;
+        RevolverHttpServiceConfig revolverHttpServiceConfig = RevolverHttpServiceConfig.builder()
+                .apis(httpsConfig.getApis()).auth(httpsConfig.getAuth())
+                .authEnabled(httpsConfig.isAuthEnabled()).compression(httpsConfig.isCompression())
+                .connectionKeepAliveInMillis(httpsConfig.getConnectionKeepAliveInMillis())
+                .connectionPoolSize(httpsConfig.getConnectionPoolSize())
+                .enpoint(httpsConfig.getEndpoint())
+                .keystorePassword(httpsConfig.getKeystorePassword())
+                .keyStorePath(httpsConfig.getKeyStorePath()).secured(true)
+                .service(httpsConfig.getService()).trackingHeaders(httpsConfig.isTrackingHeaders())
+                .type(httpsConfig.getType()).build();
+        registerCommand(config, revolverHttpServiceConfig);
+    }
+
+    private static void registerCommand(RevolverServiceConfig config,
+            RevolverHttpServiceConfig revolverHttpServiceConfig) {
+        if (config instanceof RevolverHttpServiceConfig) {
+            //Adjust connectionPool size to make sure we don't starve connections. Guard against misconfiguration
+            //1. Add concurrency from thread pool groups
+            //2. Add concurrency from apis which do not belong to any thread pool group
+            int totalConcurrency = 0;
+            if (config.getThreadPoolGroupConfig() != null) {
+                totalConcurrency = config.getThreadPoolGroupConfig().getThreadPools().stream()
+                        .mapToInt(ThreadPoolConfig::getConcurrency).sum();
+                config.getThreadPoolGroupConfig().getThreadPools()
+                        .forEach(a -> a.setInitialConcurrency(a.getConcurrency()));
+            }
+            totalConcurrency += ((RevolverHttpServiceConfig) config).getApis().stream()
+                    .filter(a -> Strings
+                            .isNullOrEmpty(a.getRuntime().getThreadPool().getThreadPoolName()))
+                    .mapToInt(a -> a.getRuntime().getThreadPool().getConcurrency()).sum();
+
+            ((RevolverHttpServiceConfig) config).setConnectionPoolSize(totalConcurrency);
+
+            ((RevolverHttpServiceConfig) config).getApis().forEach(a -> {
+                String key = config.getService() + "." + a.getApi();
+                API_STATUS.put(key, true);
+                apiConfig.put(key, a);
+                if (a.getRuntime() != null && a.getRuntime().getThreadPool() != null) {
+                    a.getRuntime().getThreadPool()
+                            .setInitialConcurrency(a.getRuntime().getThreadPool().getConcurrency());
+                }
+                if (null != a.getSplitConfig() && a.getSplitConfig().isEnabled()) {
+                    updateSplitConfig(a);
+                    if (CollectionUtils
+                            .isNotEmpty(a.getSplitConfig().getPathExpressionSplitConfigs())) {
+
+                        List<PathExpressionSplitConfig> sortedOnOrder = a.getSplitConfig()
+                                .getPathExpressionSplitConfigs().stream()
+                                .sorted(Comparator.comparing(PathExpressionSplitConfig::getOrder))
+                                .collect(Collectors.toList());
+                        a.getSplitConfig().setPathExpressionSplitConfigs(sortedOnOrder);
+                    }
+                }
+
+            });
+            generateApiConfigMap((RevolverHttpServiceConfig) config);
+            serviceNameResolver.register(revolverHttpServiceConfig.getEndpoint());
+        }
+    }
+
+    private static void updateSplitConfig(RevolverHttpApiConfig apiConfig) {
+        double from = 0.0;
+        for (SplitConfig splitConfig : CollectionUtils
+                .nullSafeList(apiConfig.getSplitConfig().getSplits())) {
+            double wrr = splitConfig.getWrr();
+            splitConfig.setFrom(from);
+            from += wrr;
+            splitConfig.setTo(from);
+        }
+        if (from > 1.0) {
+            throw new RuntimeException("wrr of split api is exceeding weight of 1");
+        }
+    }
+
     private void initializeRevolver(T configuration, Environment environment) {
         revolverConfig = getRevolverConfig(configuration);
         if (revolverConfig.getServiceResolverConfig() != null) {
@@ -443,11 +407,6 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         }
         loadServiceConfiguration(revolverConfig);
     }
-
-    public MultivaluedMap<String, ApiPathMap> getServiceToPathMap() {
-        return serviceToPathMap;
-    }
-
 
     private static void registerHttpCommand(RevolverServiceConfig config) {
         RevolverHttpServiceConfig httpConfig = (RevolverHttpServiceConfig) config;
@@ -467,4 +426,43 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         serviceConnectionPoolMap.put(httpConfig.getService(), httpConfig.getConnectionPoolSize());
 
     }
+
+    private static Map<String, RevolverHttpApiConfig> generateApiConfigMap(
+            RevolverHttpServiceConfig serviceConfiguration) {
+        val tokenMatch = Pattern.compile("\\{(([^/])+\\})");
+        List<RevolverHttpApiConfig> apis = new ArrayList<>(serviceConfiguration.getApis());
+        apis.sort((o1, o2) -> {
+            String o1Expr = generatePathExpression(o1.getPath());
+            String o2Expr = generatePathExpression(o2.getPath());
+            return tokenMatch.matcher(o2Expr).groupCount() - tokenMatch.matcher(o1Expr)
+                    .groupCount();
+        });
+        apis.sort(Comparator.comparing(RevolverHttpApiConfig::getPath));
+        apis.forEach(apiConfig -> {
+            ApiPathMap apiPathMap = ApiPathMap.builder().api(apiConfig)
+                    .path(generatePathExpression(apiConfig.getPath())).build();
+            //Update
+            int elementIndex = serviceToPathMap
+                    .getOrDefault(serviceConfiguration.getService(), Collections.emptyList())
+                    .indexOf(apiPathMap);
+            if (elementIndex == -1) {
+                serviceToPathMap.add(serviceConfiguration.getService(), apiPathMap);
+            } else {
+                serviceToPathMap.get(serviceConfiguration.getService())
+                        .set(elementIndex, apiPathMap);
+            }
+        });
+        ImmutableMap.Builder<String, RevolverHttpApiConfig> configMapBuilder = ImmutableMap
+                .builder();
+        apis.forEach(apiConfig -> configMapBuilder.put(apiConfig.getApi(), apiConfig));
+        return configMapBuilder.build();
+    }
+
+    private static String generatePathExpression(String path) {
+        if (Strings.isNullOrEmpty(path)) {
+            return "";
+        }
+        return path.replaceAll("\\{(([^/])+\\})", "(([^/])+)");
+    }
 }
+
