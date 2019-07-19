@@ -20,6 +20,7 @@ package io.dropwizard.revolver.http.config;
 import io.dropwizard.revolver.core.config.ApiLatencyConfig;
 import io.dropwizard.revolver.core.config.CommandHandlerConfig;
 import io.dropwizard.revolver.core.config.HystrixCommandConfig;
+import io.dropwizard.revolver.core.config.sentinel.SentinelCommandConfig;
 import io.dropwizard.revolver.core.model.RevolverExecutorType;
 import io.dropwizard.revolver.retry.RevolverApiRetryConfig;
 import io.dropwizard.revolver.splitting.RevolverHttpApiSplitConfig;
@@ -81,8 +82,8 @@ public class RevolverHttpApiConfig extends CommandHandlerConfig {
     public RevolverHttpApiConfig(String api, HystrixCommandConfig runtime, String path,
             @Singular Set<RequestMethod> methods, Set<Integer> acceptableResponseCodes,
             boolean sharedPool, RevolverHttpApiSplitConfig splitConfig,
-            RevolverApiRetryConfig retryConfig) {
-        super(api, sharedPool, runtime);
+            RevolverApiRetryConfig retryConfig, SentinelCommandConfig sentinelCommandConfig) {
+        super(api, sharedPool, runtime, sentinelCommandConfig);
         this.path = path;
         this.methods = methods;
         this.acceptableResponseCodes = acceptableResponseCodes;

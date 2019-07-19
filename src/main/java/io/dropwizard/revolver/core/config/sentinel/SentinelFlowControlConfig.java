@@ -9,11 +9,16 @@ import lombok.NoArgsConstructor;
  Created by nitish.goyal on 19/07/19
  ***/
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
-public class SentinelCommandConfig {
+public class SentinelFlowControlConfig {
 
-    private SentinelFlowControlConfig flowControlConfig;
+    private String poolName;
 
+    private double concurrency;
+
+    private SentinelGrade grade;
+
+    private SentinelControlBehavior sentinelControlBehavior;
 }

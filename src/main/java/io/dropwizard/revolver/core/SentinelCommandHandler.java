@@ -79,16 +79,16 @@ public class SentinelCommandHandler<RequestType extends RevolverRequest, Respons
         RevolverServiceConfig serviceConfig = handler.getServiceConfiguration();
         CommandHandlerConfig apiConfig = handler.getApiConfiguration();
 
-        if (apiConfig != null && apiConfig.getRuntime() != null
-                && apiConfig.getRuntime().getThreadPool() != null && StringUtils
-                .isNotEmpty(apiConfig.getRuntime().getThreadPool().getThreadPoolName())) {
-            return apiConfig.getRuntime().getThreadPool().getThreadPoolName();
+        if (apiConfig != null && apiConfig.getSentinelRunTime() != null
+                && apiConfig.getSentinelRunTime().getFlowControlConfig() != null && StringUtils
+                .isNotEmpty(apiConfig.getSentinelRunTime().getFlowControlConfig().getPoolName())) {
+            return apiConfig.getSentinelRunTime().getFlowControlConfig().getPoolName();
         }
 
-        if (serviceConfig != null && serviceConfig.getRuntime() != null
-                && serviceConfig.getRuntime().getThreadPool() != null && StringUtils
-                .isNotEmpty(serviceConfig.getRuntime().getThreadPool().getThreadPoolName())) {
-            return serviceConfig.getRuntime().getThreadPool().getThreadPoolName();
+        if (serviceConfig != null && serviceConfig.getSentinelCommandConfig() != null
+                && serviceConfig.getSentinelCommandConfig().getFlowControlConfig() != null && StringUtils
+                .isNotEmpty(serviceConfig.getSentinelCommandConfig().getFlowControlConfig().getPoolName())) {
+            return serviceConfig.getSentinelCommandConfig().getFlowControlConfig().getPoolName();
         }
         return request.getApi();
     }

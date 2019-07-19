@@ -18,6 +18,7 @@
 package io.dropwizard.revolver.core.config;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.dropwizard.revolver.core.config.sentinel.SentinelCommandConfig;
 import javax.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -44,6 +45,7 @@ public class RevolverServiceConfig {
     private String service;
     private String fallbackAddress;
     private HystrixCommandConfig runtime = new HystrixCommandConfig();
+    private SentinelCommandConfig sentinelCommandConfig = new SentinelCommandConfig();
 
     public RevolverServiceConfig(String type, String service) {
         this.type = type;
