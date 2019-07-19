@@ -146,7 +146,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         initializeRevolver(configuration, environment);
 
         initializeHystrix(environment, metricsPublisher);
-        initializeSentinel(configuration);
+        initializeSentinel(revolverConfig);
 
         initializeOptimizer(metrics, scheduledExecutorService);
 
@@ -485,7 +485,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
     }
 
 
-    private void initializeSentinel(T configuration) {
+    public static void initializeSentinel(RevolverConfig revolverConfig) {
 
         List<String> rulesInitialized = Lists.newArrayList();
         SentinelRules sentinelRules = new SentinelRules();
@@ -508,27 +508,29 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         initializeRules(sentinelRules);
     }
 
-    private void initializeRules(SentinelRules sentinelRules) {
+    private static void initializeRules(SentinelRules sentinelRules) {
         FlowRuleManager.loadRules(sentinelRules.getFlowRules());
     }
 
-    private void addRules(SentinelCommandConfig sentinelCommandConfig, SentinelRules sentinelRules,
+    private static void addRules(SentinelCommandConfig sentinelCommandConfig, SentinelRules sentinelRules,
             List<String> poolsInitialized) {
 
+        if (sentinelCommandConfig == null) {
+            return;
+        }
         addFlowRules(sentinelCommandConfig.getFlowControlConfig(), sentinelRules, poolsInitialized);
+
 
     }
 
-    private void addFlowRules(SentinelFlowControlConfig flowControlConfig, SentinelRules sentinelRules,
+    private static void addFlowRules(SentinelFlowControlConfig flowControlConfig, SentinelRules sentinelRules,
             List<String> poolsInitialized) {
 
-        if (flowControlConfig == null || StringUtils.isEmpty(flowControlConfig.getPoolName())) {
+        if (flowControlConfig == null || StringUtils.isEmpty(flowControlConfig.getPoolName()) || poolsInitialized
+                .contains(flowControlConfig.getPoolName())) {
             return;
         }
-        if (poolsInitialized.contains(flowControlConfig.getPoolName())) {
-            throw new RuntimeException("Pool with similar name already initialized");
-        }
-
+        poolsInitialized.add(flowControlConfig.getPoolName());
         FlowRule flowRule = new FlowRule();
         flowRule.setResource(flowControlConfig.getPoolName());
         flowRule.setCount(flowControlConfig.getConcurrency());
@@ -537,7 +539,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         sentinelRules.getFlowRules().add(flowRule);
     }
 
-    private void setGrade(FlowRule flowRule, SentinelFlowControlConfig flowControlConfig) {
+    private static void setGrade(FlowRule flowRule, SentinelFlowControlConfig flowControlConfig) {
         if (flowControlConfig.getGrade() == null) {
             return;
         }
@@ -551,7 +553,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         }
     }
 
-    private void addRulesForApis(RevolverHttpServiceConfig config,
+    private static void addRulesForApis(RevolverHttpServiceConfig config,
             SentinelRules sentinelRules, List<String> rulesInitialized) {
         config.getApis().forEach(revolverHttpApiConfig -> {
             addRules(revolverHttpApiConfig.getSentinelRunTime(), sentinelRules, rulesInitialized);

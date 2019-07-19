@@ -47,8 +47,9 @@ public class RevolverServiceConfig {
     private HystrixCommandConfig runtime = new HystrixCommandConfig();
     private SentinelCommandConfig sentinelCommandConfig = new SentinelCommandConfig();
 
-    public RevolverServiceConfig(String type, String service) {
+    public RevolverServiceConfig(String type, String service, SentinelCommandConfig sentinelCommandConfig) {
         this.type = type;
         this.service = service;
+        this.sentinelCommandConfig = sentinelCommandConfig;
     }
 }
