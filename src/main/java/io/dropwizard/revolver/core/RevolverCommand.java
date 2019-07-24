@@ -68,7 +68,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
             ResponseType response;
             RevolverExecutorType revolverExecutorType = request.getRevolverExecutorType();
             switch (revolverExecutorType) {
-                case SENITNEL:
+                case SENTINEL:
                     response = (ResponseType) new SentinelCommandHandler(
                             this.context, this,
                             normalizedRequest).executeSync();
@@ -107,7 +107,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
 
         RevolverExecutorType revolverExecutorType = request.getRevolverExecutorType();
         switch (revolverExecutorType) {
-            case SENITNEL:
+            case SENTINEL:
                 return new SentinelCommandHandler(
                         this.context, this, request).executeASync();
             case HYSTRIX:
@@ -127,7 +127,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
 
         RevolverExecutorType revolverExecutorType = request.getRevolverExecutorType();
         switch (revolverExecutorType) {
-            case SENITNEL:
+            case SENTINEL:
                 return new SentinelCommandHandler<>(this.context, this, request).executeAsyncAsObservable();
 
             case HYSTRIX:

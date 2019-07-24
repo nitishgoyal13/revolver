@@ -50,7 +50,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.GET).path("v1/test")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -62,7 +62,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.GET).path("v1/test_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
     }
@@ -74,7 +74,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.GET).path("v1/test/multi")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -87,7 +87,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.GET).path("v1/test/multi_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL)
+                .revolverExecutorType(RevolverExecutorType.SENTINEL)
                 .build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
@@ -100,7 +100,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.POST).path("v1/test")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -112,7 +112,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.POST).path("v1/test_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
     }
@@ -124,7 +124,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.POST).path("v1/test/multi")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -137,7 +137,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.POST).path("v1/test/multi_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL)
+                .revolverExecutorType(RevolverExecutorType.SENTINEL)
                 .build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
@@ -150,7 +150,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.PUT).path("v1/test")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -162,7 +162,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.PUT).path("v1/test_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
     }
@@ -174,7 +174,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.PUT).path("v1/test/multi")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -187,7 +187,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.PUT).path("v1/test/multi_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL)
+                .revolverExecutorType(RevolverExecutorType.SENTINEL)
                 .build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
@@ -201,7 +201,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.DELETE).path("v1/test")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -213,7 +213,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.DELETE).path("v1/test_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
     }
@@ -225,7 +225,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.DELETE).path("v1/test/multi")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -238,7 +238,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.DELETE).path("v1/test/multi_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL)
+                .revolverExecutorType(RevolverExecutorType.SENTINEL)
                 .build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
@@ -251,7 +251,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.HEAD).path("v1/test")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -263,7 +263,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.HEAD).path("v1/test_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
     }
@@ -275,7 +275,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.HEAD).path("v1/test/multi")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -288,7 +288,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.HEAD).path("v1/test/multi_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL)
+                .revolverExecutorType(RevolverExecutorType.SENTINEL)
                 .build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
@@ -301,7 +301,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.PATCH).path("v1/test")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -313,7 +313,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.PATCH).path("v1/test_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
     }
@@ -325,7 +325,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.PATCH).path("v1/test/multi")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -338,7 +338,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.PATCH).path("v1/test/multi_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL)
+                .revolverExecutorType(RevolverExecutorType.SENTINEL)
                 .build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
@@ -351,7 +351,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.OPTIONS).path("v1/test")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -363,7 +363,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.OPTIONS).path("v1/test_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL)
+                .revolverExecutorType(RevolverExecutorType.SENTINEL)
                 .build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
@@ -376,7 +376,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.OPTIONS).path("v1/test/multi")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -389,7 +389,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         RevolverHttpCommand httpCommand = RevolverBundle.getHttpCommand("test", "test");
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.OPTIONS).path("v1/test/multi_invalid")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL)
+                .revolverExecutorType(RevolverExecutorType.SENTINEL)
                 .build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 404);
@@ -403,7 +403,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
         httpCommand.getServiceConfiguration().getApis().forEach(a -> a.setSharedPool(true));
         val request = RevolverHttpRequest.builder().service("test").api("test")
                 .method(RevolverHttpApiConfig.RequestMethod.GET).path("v1/test")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }
@@ -416,7 +416,7 @@ public class RevolverSentinelSimpleHttpCommandTest extends BaseRevolverTest {
                 .getHttpCommand("test", "test_group_thread_pool");
         val request = RevolverHttpRequest.builder().service("test").api("test_group_thread_pool")
                 .method(RevolverHttpApiConfig.RequestMethod.GET).path("v1/test")
-                .revolverExecutorType(RevolverExecutorType.SENITNEL).build();
+                .revolverExecutorType(RevolverExecutorType.SENTINEL).build();
         val response = httpCommand.execute(request);
         assertEquals(response.getStatusCode(), 200);
     }

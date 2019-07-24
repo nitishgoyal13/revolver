@@ -6,5 +6,5 @@ package io.dropwizard.revolver.core.model;
 public enum RevolverExecutorType {
 
     HYSTRIX,
-    SENITNEL
+    SENTINEL
 }
