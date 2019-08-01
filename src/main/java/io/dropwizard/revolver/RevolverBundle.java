@@ -535,12 +535,15 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         flowRule.setResource(flowControlConfig.getPoolName());
         flowRule.setCount(flowControlConfig.getConcurrency());
         setGrade(flowRule, flowControlConfig);
+        setControlBehaviour(flowRule, flowControlConfig);
 
         sentinelRules.getFlowRules().add(flowRule);
     }
 
     private static void setGrade(FlowRule flowRule, SentinelFlowControlConfig flowControlConfig) {
         if (flowControlConfig.getGrade() == null) {
+            //Default behaviour is thread
+            flowRule.setGrade(RuleConstant.FLOW_GRADE_THREAD);
             return;
         }
         switch (flowControlConfig.getGrade()) {
@@ -549,6 +552,24 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
                 break;
             case FLOW_GRADE_THREAD:
                 flowRule.setGrade(RuleConstant.FLOW_GRADE_THREAD);
+                break;
+        }
+    }
+
+    private static void setControlBehaviour(FlowRule flowRule, SentinelFlowControlConfig flowControlConfig) {
+        if (flowControlConfig.getSentinelControlBehavior() == null) {
+            flowRule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_DEFAULT);
+            return;
+        }
+        switch (flowControlConfig.getSentinelControlBehavior()) {
+            case CONTROL_BEHAVIOR_DEFAULT:
+                flowRule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_DEFAULT);
+                break;
+            case CONTROL_BEHAVIOR_WARM_UP:
+                flowRule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_WARM_UP);
+                break;
+            case CONTROL_BEHAVIOR_RATE_LIMITER:
+                flowRule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_RATE_LIMITER);
                 break;
         }
     }

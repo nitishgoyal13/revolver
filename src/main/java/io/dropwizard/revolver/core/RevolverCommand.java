@@ -27,6 +27,7 @@ import io.dropwizard.revolver.core.model.RevolverResponse;
 import io.dropwizard.revolver.core.tracing.TraceInfo;
 import io.dropwizard.revolver.core.util.HystroxCommandHelper;
 import io.dropwizard.revolver.core.util.RevolverCommandHelper;
+import io.dropwizard.revolver.core.util.RevolverExceptionHelper;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
@@ -87,7 +88,8 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
         } catch (Throwable t) {
             Throwable rootCause = ExceptionUtils.getRootCause(t);
             log.error("Error occurred while executing revolver command for service : " + request
-                    .getService() + ", for api : " + request.getApi() + " with error : " + t);
+                    .getService() + ", for api : " + request.getApi() + " with error : " + RevolverExceptionHelper
+                    .getLeafThrowable(t));
             if (rootCause == null) {
                 rootCause = t;
             }
