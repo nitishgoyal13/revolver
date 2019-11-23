@@ -155,30 +155,11 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         InlineCallbackHandler callbackHandler = InlineCallbackHandler.builder()
                 .persistenceProvider(persistenceProvider).revolverConfig(revolverConfig).build();
 
-        environment.jersey().register(
-                new RevolverRequestResource(environment.getObjectMapper(), MSG_PACK_OBJECT_MAPPER,
-                        persistenceProvider, callbackHandler, metrics, revolverConfig));
-        environment.jersey()
-                .register(new RevolverCallbackResource(persistenceProvider, callbackHandler));
-        environment.jersey().register(
-                new RevolverExceptionMapper(environment.getObjectMapper(), MSG_PACK_OBJECT_MAPPER));
-        environment.jersey().register(new TimeoutExceptionMapper(environment.getObjectMapper()));
-        environment.jersey().register(new RevolverRequestFilter(revolverConfig));
-        environment.jersey().register(
-                new RevolverMailboxResource(persistenceProvider, environment.getObjectMapper(),
-                        MSG_PACK_OBJECT_MAPPER, Collections.unmodifiableMap(apiConfig)));
-        environment.jersey().register(new RevolverMetadataResource(revolverConfig));
-
-        DynamicConfigHandler dynamicConfigHandler = new DynamicConfigHandler(
-                getRevolverConfigAttribute(), revolverConfig, environment.getObjectMapper(),
-                getConfigSource(), this);
-        //Register dynamic config poller if it is enabled
-        if (revolverConfig.isDynamicConfig()) {
-            environment.lifecycle().manage(dynamicConfigHandler);
-        }
-        environment.jersey().register(new RevolverConfigResource(dynamicConfigHandler));
-        environment.jersey().register(new RevolverApiManageResource());
+        registerResources(environment, metrics, persistenceProvider, callbackHandler);
+        registerMappers(environment);
+        registerFilters(environment);
     }
+
 
     private void initializeHystrix(Environment environment, HystrixCodaHaleMetricsPublisher metricsPublisher) {
         HystrixPlugins.getInstance().registerMetricsPublisher(metricsPublisher);
@@ -580,5 +561,39 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
             addRules(revolverHttpApiConfig.getSentinelRunTime(), sentinelRules, rulesInitialized);
         });
     }
+
+    private void registerResources(Environment environment, MetricRegistry metrics,
+            PersistenceProvider persistenceProvider, InlineCallbackHandler callbackHandler) {
+        environment.jersey().register(
+                new RevolverRequestResource(environment.getObjectMapper(), MSG_PACK_OBJECT_MAPPER,
+                        persistenceProvider, callbackHandler, metrics, revolverConfig));
+        environment.jersey()
+                .register(new RevolverCallbackResource(persistenceProvider, callbackHandler));
+        environment.jersey().register(new RevolverMetadataResource(revolverConfig));
+        environment.jersey().register(
+                new RevolverMailboxResource(persistenceProvider, environment.getObjectMapper(),
+                        MSG_PACK_OBJECT_MAPPER, Collections.unmodifiableMap(apiConfig)));
+
+        DynamicConfigHandler dynamicConfigHandler = new DynamicConfigHandler(
+                getRevolverConfigAttribute(), revolverConfig, environment.getObjectMapper(),
+                getConfigSource(), this);
+        //Register dynamic config poller if it is enabled
+        if (revolverConfig.isDynamicConfig()) {
+            environment.lifecycle().manage(dynamicConfigHandler);
+        }
+        environment.jersey().register(new RevolverConfigResource(dynamicConfigHandler));
+        environment.jersey().register(new RevolverApiManageResource());
+    }
+
+    private void registerFilters(Environment environment) {
+        environment.jersey().register(new RevolverRequestFilter(revolverConfig));
+    }
+
+    private void registerMappers(Environment environment) {
+        environment.jersey().register(
+                new RevolverExceptionMapper(environment.getObjectMapper(), MSG_PACK_OBJECT_MAPPER));
+        environment.jersey().register(new TimeoutExceptionMapper(environment.getObjectMapper()));
+    }
+
 }
 
