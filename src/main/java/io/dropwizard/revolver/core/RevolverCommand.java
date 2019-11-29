@@ -24,10 +24,13 @@ import io.dropwizard.revolver.core.config.RuntimeConfig;
 import io.dropwizard.revolver.core.model.RevolverExecutorType;
 import io.dropwizard.revolver.core.model.RevolverRequest;
 import io.dropwizard.revolver.core.model.RevolverResponse;
+import io.dropwizard.revolver.core.resilience.ResilienceCommandHelper;
+import io.dropwizard.revolver.core.sentinel.SentinelCommandHandler;
 import io.dropwizard.revolver.core.tracing.TraceInfo;
 import io.dropwizard.revolver.core.util.HystroxCommandHelper;
 import io.dropwizard.revolver.core.util.RevolverCommandHelper;
 import io.dropwizard.revolver.core.util.RevolverExceptionHelper;
+import io.dropwizard.revolver.http.RevolverHttpContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +55,9 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
     public RevolverCommand(ContextType context, ClientConfig clientConfiguration,
             RuntimeConfig runtimeConfig, ServiceConfigurationType serviceConfiguration,
             CommandHandlerConfigType apiConfiguration) {
+        if (context == null) {
+            context = (ContextType) new RevolverHttpContext();
+        }
         this.context = context;
         this.clientConfiguration = clientConfiguration;
         this.runtimeConfig = runtimeConfig;
@@ -71,6 +77,11 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
             switch (revolverExecutorType) {
                 case SENTINEL:
                     response = (ResponseType) new SentinelCommandHandler(
+                            this.context, this,
+                            normalizedRequest).executeSync();
+                    break;
+                case RESILIENCE:
+                    response = (ResponseType) new ResilienceCommandHelper<>(
                             this.context, this,
                             normalizedRequest).executeSync();
                     break;
@@ -112,6 +123,9 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
             case SENTINEL:
                 return new SentinelCommandHandler(
                         this.context, this, request).executeASync();
+            case RESILIENCE:
+                return new ResilienceCommandHelper<>(
+                        this.context, this, normalizedRequest).executeASync();
             case HYSTRIX:
             default:
                 return new HystrixCommandHandler<>(

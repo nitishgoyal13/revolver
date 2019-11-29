@@ -15,9 +15,6 @@
  */
 package io.dropwizard.revolver;
 
-import com.alibaba.csp.sentinel.slots.block.RuleConstant;
-import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;
-import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.json.MetricsModule;
 import com.collections.CollectionUtils;
@@ -25,9 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.netflix.hystrix.contrib.codahalemetricspublisher.HystrixCodaHaleMetricsPublisher;
-import com.netflix.hystrix.contrib.metrics.eventstream.HystrixMetricsStreamServlet;
 import com.netflix.hystrix.strategy.HystrixPlugins;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
@@ -40,10 +35,12 @@ import io.dropwizard.revolver.core.config.AerospikeMailBoxConfig;
 import io.dropwizard.revolver.core.config.InMemoryMailBoxConfig;
 import io.dropwizard.revolver.core.config.RevolverConfig;
 import io.dropwizard.revolver.core.config.RevolverServiceConfig;
+import io.dropwizard.revolver.core.config.hystrix.HystrixUtil;
 import io.dropwizard.revolver.core.config.hystrix.ThreadPoolConfig;
-import io.dropwizard.revolver.core.config.sentinel.SentinelCommandConfig;
-import io.dropwizard.revolver.core.config.sentinel.SentinelFlowControlConfig;
-import io.dropwizard.revolver.core.sentinel.SentinelRules;
+import io.dropwizard.revolver.core.model.RevolverExecutorType;
+import io.dropwizard.revolver.core.resilience.ResilienceHttpContext;
+import io.dropwizard.revolver.core.resilience.ResilienceUtil;
+import io.dropwizard.revolver.core.sentinel.SentinelUtil;
 import io.dropwizard.revolver.discovery.RevolverServiceResolver;
 import io.dropwizard.revolver.discovery.model.RangerEndpointSpec;
 import io.dropwizard.revolver.discovery.model.SimpleEndpointSpec;
@@ -54,6 +51,7 @@ import io.dropwizard.revolver.handler.ConfigSource;
 import io.dropwizard.revolver.handler.DynamicConfigHandler;
 import io.dropwizard.revolver.http.RevolverHttpClientFactory;
 import io.dropwizard.revolver.http.RevolverHttpCommand;
+import io.dropwizard.revolver.http.RevolverHttpContext;
 import io.dropwizard.revolver.http.auth.BasicAuthConfig;
 import io.dropwizard.revolver.http.auth.TokenAuthConfig;
 import io.dropwizard.revolver.http.config.RevolverHttpApiConfig;
@@ -93,7 +91,6 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
@@ -114,6 +111,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
     private static Map<String, Integer> serviceConnectionPoolMap = new ConcurrentHashMap<>();
 
     private static RevolverConfig revolverConfig;
+    private static ResilienceHttpContext resilienceHttpContext = new ResilienceHttpContext();
 
     @Override
     public void initialize(Bootstrap<?> bootstrap) {
@@ -145,8 +143,9 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
         initializeRevolver(configuration, environment);
 
-        initializeHystrix(environment, metricsPublisher);
-        initializeSentinel(revolverConfig);
+        HystrixUtil.initializeHystrix(environment, metricsPublisher, revolverConfig);
+        SentinelUtil.initializeSentinel(revolverConfig);
+        ResilienceUtil.initializeResilience(revolverConfig, resilienceHttpContext, environment.metrics());
 
         initializeOptimizer(metrics, scheduledExecutorService);
 
@@ -158,18 +157,6 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         registerResources(environment, metrics, persistenceProvider, callbackHandler);
         registerMappers(environment);
         registerFilters(environment);
-    }
-
-
-    private void initializeHystrix(Environment environment, HystrixCodaHaleMetricsPublisher metricsPublisher) {
-        HystrixPlugins.getInstance().registerMetricsPublisher(metricsPublisher);
-        if (Strings.isNullOrEmpty(revolverConfig.getHystrixStreamPath())) {
-            environment.getApplicationContext()
-                    .addServlet(HystrixMetricsStreamServlet.class, "/hystrix.stream");
-        } else {
-            environment.getApplicationContext().addServlet(HystrixMetricsStreamServlet.class,
-                    revolverConfig.getHystrixStreamPath());
-        }
     }
 
 
@@ -225,10 +212,25 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
             throw new RevolverExecutionException(RevolverExecutionException.Type.BAD_REQUEST,
                     "No api spec defined for service: " + service);
         }
+        RevolverHttpContext revolverContext = getRevolverContext(serviceKey);
         return RevolverHttpCommand.builder().apiConfiguration(apiConfig.get(serviceKey))
                 .clientConfiguration(revolverConfig.getClientConfig())
                 .runtimeConfig(revolverConfig.getGlobal())
+                .revolverContext(revolverContext)
                 .serviceConfiguration(serviceConfig.get(service)).build();
+    }
+
+    private static RevolverHttpContext getRevolverContext(String serviceKey) {
+        RevolverHttpApiConfig revolverHttpApiConfig = apiConfig.get(serviceKey);
+        RevolverExecutorType revolverExecutorType = revolverHttpApiConfig.getRevolverExecutorType();
+        if (revolverExecutorType == null) {
+            return new ResilienceHttpContext();
+        }
+        switch (revolverExecutorType) {
+            case RESILIENCE:
+                return resilienceHttpContext;
+        }
+        return new RevolverHttpContext();
     }
 
     public static RevolverServiceResolver getServiceNameResolver() {
@@ -408,7 +410,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
     }
 
-    private static Map<String, RevolverHttpApiConfig> generateApiConfigMap(
+    private static void generateApiConfigMap(
             RevolverHttpServiceConfig serviceConfiguration) {
         val tokenMatch = Pattern.compile("\\{(([^/])+\\})");
         List<RevolverHttpApiConfig> apis = new ArrayList<>(serviceConfiguration.getApis());
@@ -436,7 +438,6 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         ImmutableMap.Builder<String, RevolverHttpApiConfig> configMapBuilder = ImmutableMap
                 .builder();
         apis.forEach(apiConfig -> configMapBuilder.put(apiConfig.getApi(), apiConfig));
-        return configMapBuilder.build();
     }
 
     private static String generatePathExpression(String path) {
@@ -465,102 +466,6 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
                 .registerSubtypes(new NamedType(AerospikeMailBoxConfig.class, "aerospike"));
     }
 
-
-    public static void initializeSentinel(RevolverConfig revolverConfig) {
-
-        List<String> rulesInitialized = Lists.newArrayList();
-        SentinelRules sentinelRules = new SentinelRules();
-        for (RevolverServiceConfig config : revolverConfig.getServices()) {
-            if (config.getSentinelCommandConfig() == null) {
-                continue;
-            }
-            SentinelCommandConfig sentinelCommandConfig = config.getSentinelCommandConfig();
-            addRules(sentinelCommandConfig, sentinelRules, rulesInitialized);
-            String type = config.getType();
-            switch (type) {
-                case "http":
-                    addRulesForApis((RevolverHttpServiceConfig) config, sentinelRules, rulesInitialized);
-                    break;
-                default:
-                    log.warn("Unsupported Service type: " + type);
-
-            }
-        }
-        initializeRules(sentinelRules);
-    }
-
-    private static void initializeRules(SentinelRules sentinelRules) {
-        FlowRuleManager.loadRules(sentinelRules.getFlowRules());
-    }
-
-    private static void addRules(SentinelCommandConfig sentinelCommandConfig, SentinelRules sentinelRules,
-            List<String> poolsInitialized) {
-
-        if (sentinelCommandConfig == null) {
-            return;
-        }
-        addFlowRules(sentinelCommandConfig.getFlowControlConfig(), sentinelRules, poolsInitialized);
-
-
-    }
-
-    private static void addFlowRules(SentinelFlowControlConfig flowControlConfig, SentinelRules sentinelRules,
-            List<String> poolsInitialized) {
-
-        if (flowControlConfig == null || StringUtils.isEmpty(flowControlConfig.getPoolName()) || poolsInitialized
-                .contains(flowControlConfig.getPoolName())) {
-            return;
-        }
-        poolsInitialized.add(flowControlConfig.getPoolName());
-        FlowRule flowRule = new FlowRule();
-        flowRule.setResource(flowControlConfig.getPoolName());
-        flowRule.setCount(flowControlConfig.getConcurrency());
-        setGrade(flowRule, flowControlConfig);
-        setControlBehaviour(flowRule, flowControlConfig);
-
-        sentinelRules.getFlowRules().add(flowRule);
-    }
-
-    private static void setGrade(FlowRule flowRule, SentinelFlowControlConfig flowControlConfig) {
-        if (flowControlConfig.getGrade() == null) {
-            //Default behaviour is thread
-            flowRule.setGrade(RuleConstant.FLOW_GRADE_THREAD);
-            return;
-        }
-        switch (flowControlConfig.getGrade()) {
-            case FLOW_GRADE_QPS:
-                flowRule.setGrade(RuleConstant.FLOW_GRADE_QPS);
-                break;
-            case FLOW_GRADE_THREAD:
-                flowRule.setGrade(RuleConstant.FLOW_GRADE_THREAD);
-                break;
-        }
-    }
-
-    private static void setControlBehaviour(FlowRule flowRule, SentinelFlowControlConfig flowControlConfig) {
-        if (flowControlConfig.getSentinelControlBehavior() == null) {
-            flowRule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_DEFAULT);
-            return;
-        }
-        switch (flowControlConfig.getSentinelControlBehavior()) {
-            case CONTROL_BEHAVIOR_DEFAULT:
-                flowRule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_DEFAULT);
-                break;
-            case CONTROL_BEHAVIOR_WARM_UP:
-                flowRule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_WARM_UP);
-                break;
-            case CONTROL_BEHAVIOR_RATE_LIMITER:
-                flowRule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_RATE_LIMITER);
-                break;
-        }
-    }
-
-    private static void addRulesForApis(RevolverHttpServiceConfig config,
-            SentinelRules sentinelRules, List<String> rulesInitialized) {
-        config.getApis().forEach(revolverHttpApiConfig -> {
-            addRules(revolverHttpApiConfig.getSentinelRunTime(), sentinelRules, rulesInitialized);
-        });
-    }
 
     private void registerResources(Environment environment, MetricRegistry metrics,
             PersistenceProvider persistenceProvider, InlineCallbackHandler callbackHandler) {

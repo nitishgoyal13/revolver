@@ -17,6 +17,7 @@
 
 package io.dropwizard.revolver.core.config;
 
+import io.dropwizard.revolver.core.config.resilience.ResilienceCommandConfig;
 import io.dropwizard.revolver.core.config.sentinel.SentinelCommandConfig;
 import javax.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -43,6 +44,8 @@ public class CommandHandlerConfig {
     private HystrixCommandConfig runtime = new HystrixCommandConfig();
 
     private SentinelCommandConfig sentinelRunTime = new SentinelCommandConfig();
+
+    private ResilienceCommandConfig resilienceRunTime = new ResilienceCommandConfig();
 
 
 }

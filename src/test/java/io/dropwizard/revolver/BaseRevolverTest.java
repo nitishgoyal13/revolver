@@ -38,9 +38,12 @@ import io.dropwizard.revolver.core.config.RevolverConfig;
 import io.dropwizard.revolver.core.config.RuntimeConfig;
 import io.dropwizard.revolver.core.config.ThreadPoolGroupConfig;
 import io.dropwizard.revolver.core.config.hystrix.ThreadPoolConfig;
+import io.dropwizard.revolver.core.config.resilience.ResilienceCommandConfig;
 import io.dropwizard.revolver.core.config.sentinel.SentinelCommandConfig;
 import io.dropwizard.revolver.core.config.sentinel.SentinelFlowControlConfig;
 import io.dropwizard.revolver.core.config.sentinel.SentinelGrade;
+import io.dropwizard.revolver.core.model.RevolverExecutorType;
+import io.dropwizard.revolver.core.sentinel.SentinelUtil;
 import io.dropwizard.revolver.discovery.RevolverServiceResolver;
 import io.dropwizard.revolver.discovery.ServiceResolverConfig;
 import io.dropwizard.revolver.discovery.model.SimpleEndpointSpec;
@@ -165,6 +168,23 @@ public class BaseRevolverTest {
                                                         .grade(SentinelGrade.FLOW_GRADE_THREAD)
                                                         .poolName("test-test").build())
                                                 .build())
+                                        .build())
+                                .api(RevolverHttpApiConfig.configBuilder()
+                                        .api("resilience-test")
+                                        .method(RequestMethod.GET)
+                                        .method(RequestMethod.POST)
+                                        .method(RequestMethod.DELETE)
+                                        .method(RequestMethod.PATCH)
+                                        .method(RequestMethod.PUT)
+                                        .method(RequestMethod.HEAD)
+                                        .method(RequestMethod.OPTIONS)
+                                        .path("{version}/resilience-test")
+                                        .runtime(
+                                                HystrixCommandConfig.builder().threadPool(
+                                                        ThreadPoolConfig.builder().concurrency(1)
+                                                                .timeout(10000).build()).build())
+                                        .resilienceCommandConfig(ResilienceCommandConfig.builder().build())
+                                        .revolverExecutorType(RevolverExecutorType.RESILIENCE)
                                         .build())
                                 .api(RevolverHttpApiConfig.configBuilder()
                                         .api("test_path_expression")
@@ -334,7 +354,7 @@ public class BaseRevolverTest {
         RevolverBundle.serviceNameResolver = RevolverServiceResolver.builder()
                 .objectMapper(environment.getObjectMapper()).build();
         RevolverBundle.loadServiceConfiguration(revolverConfig);
-        RevolverBundle.initializeSentinel(revolverConfig);
+        SentinelUtil.initializeSentinel(revolverConfig);
 
     }
 
