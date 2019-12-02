@@ -208,7 +208,7 @@ public class RevolverRequestResource {
                             msgPackObjectMapper)).build();
         }
         String serviceKey = service + "." + apiMap.getApi().getApi();
-        if (RevolverBundle.API_STATUS.containsKey(serviceKey) && !RevolverBundle.API_STATUS
+        if (RevolverBundle.apiStatus.containsKey(serviceKey) && !RevolverBundle.apiStatus
                 .get(serviceKey)) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(ResponseTransformationUtil.transform(SERVICE_UNAVAILABLE_RESPONSE,
@@ -362,8 +362,7 @@ public class RevolverRequestResource {
 
     private Response executeInline(String service, RevolverHttpApiConfig api,
             RevolverHttpApiConfig.RequestMethod method, String path, HttpHeaders headers,
-            UriInfo uriInfo, byte[] body)
-            throws IOException, TimeoutException {
+            UriInfo uriInfo, byte[] body) throws IOException, TimeoutException {
         val sanatizedHeaders = new MultivaluedHashMap<String, String>();
         headers.getRequestHeaders().forEach(sanatizedHeaders::put);
         cleanHeaders(sanatizedHeaders, api);
@@ -382,7 +381,6 @@ public class RevolverRequestResource {
                 .transactionId(headers.getHeaderString(RevolversHttpHeaders.TXN_ID_HEADER))
                 .timestamp(System.currentTimeMillis()).build()).api(api.getApi()).service(service)
                 .path(path).method(method).headers(sanatizedHeaders)
-                .revolverExecutorType(api.getRevolverExecutorType())
                 .queryParams(uriInfo.getQueryParameters()).body(body).build());
     }
 

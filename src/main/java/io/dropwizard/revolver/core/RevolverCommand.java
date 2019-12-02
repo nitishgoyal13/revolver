@@ -27,7 +27,7 @@ import io.dropwizard.revolver.core.model.RevolverResponse;
 import io.dropwizard.revolver.core.resilience.ResilienceCommandHelper;
 import io.dropwizard.revolver.core.sentinel.SentinelCommandHandler;
 import io.dropwizard.revolver.core.tracing.TraceInfo;
-import io.dropwizard.revolver.core.util.HystroxCommandHelper;
+import io.dropwizard.revolver.core.util.HystrixCommandHelper;
 import io.dropwizard.revolver.core.util.RevolverCommandHelper;
 import io.dropwizard.revolver.core.util.RevolverExceptionHelper;
 import io.dropwizard.revolver.http.RevolverHttpContext;
@@ -88,7 +88,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
                 case HYSTRIX:
                 default:
                     response = (ResponseType) new HystrixCommandHandler(
-                            HystroxCommandHelper.setter(this, request.getApi()), this.context, this,
+                            HystrixCommandHelper.setter(this, request.getApi()), this.context, this,
                             normalizedRequest).execute();
                     break;
             }
@@ -129,7 +129,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
             case HYSTRIX:
             default:
                 return new HystrixCommandHandler<>(
-                        HystroxCommandHelper.setter(this, request.getApi()), this.context, this,
+                        HystrixCommandHelper.setter(this, request.getApi()), this.context, this,
                         normalizedRequest).executeAsync();
 
         }
@@ -148,7 +148,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
 
             case HYSTRIX:
             default:
-                return new HystrixCommandHandler<>(HystroxCommandHelper.setter(this, request.getApi()),
+                return new HystrixCommandHandler<>(HystrixCommandHelper.setter(this, request.getApi()),
                         this.context, this, normalizedRequest).toObservable();
         }
 

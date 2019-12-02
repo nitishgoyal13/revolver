@@ -94,6 +94,7 @@ public class BaseRevolverTest {
     protected static InlineCallbackHandler callbackHandler;
 
     static {
+        when(environment.getObjectMapper()).thenReturn(mapper);
 
         val simpleEndpoint = new SimpleEndpointSpec();
         simpleEndpoint.setHost("localhost");

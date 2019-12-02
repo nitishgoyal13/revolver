@@ -22,7 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 /***
  Created by nitish.goyal on 18/07/19
  ***/
-public class HystroxCommandHelper {
+public class HystrixCommandHelper {
 
     /*
          Group thread pools can be specified at service level. Different api of the service can subscribe to

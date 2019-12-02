@@ -35,6 +35,7 @@ import io.dropwizard.revolver.core.config.AerospikeMailBoxConfig;
 import io.dropwizard.revolver.core.config.InMemoryMailBoxConfig;
 import io.dropwizard.revolver.core.config.RevolverConfig;
 import io.dropwizard.revolver.core.config.RevolverServiceConfig;
+import io.dropwizard.revolver.core.config.ServiceDiscoveryConfig;
 import io.dropwizard.revolver.core.config.hystrix.HystrixUtil;
 import io.dropwizard.revolver.core.config.hystrix.ThreadPoolConfig;
 import io.dropwizard.revolver.core.model.RevolverExecutorType;
@@ -102,7 +103,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
     public static final ObjectMapper MSG_PACK_OBJECT_MAPPER = new ObjectMapper(
             new MessagePackFactory());
-    public static final Map<String, Boolean> API_STATUS = new ConcurrentHashMap<>();
+    public static final Map<String, Boolean> apiStatus = new ConcurrentHashMap<>();
 
     public static RevolverServiceResolver serviceNameResolver = null;
     private static Map<String, RevolverHttpServiceConfig> serviceConfig = new ConcurrentHashMap<>();
@@ -283,49 +284,66 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
     private static void registerCommand(RevolverServiceConfig config,
             RevolverHttpServiceConfig revolverHttpServiceConfig) {
+
         if (config instanceof RevolverHttpServiceConfig) {
-            //Adjust connectionPool size to make sure we don't starve connections. Guard against misconfiguration
-            //1. Add concurrency from thread pool groups
-            //2. Add concurrency from apis which do not belong to any thread pool group
-            int totalConcurrency = 0;
-            if (config.getThreadPoolGroupConfig() != null) {
-                totalConcurrency = config.getThreadPoolGroupConfig().getThreadPools().stream()
-                        .mapToInt(ThreadPoolConfig::getConcurrency).sum();
-                config.getThreadPoolGroupConfig().getThreadPools()
-                        .forEach(a -> a.setInitialConcurrency(a.getConcurrency()));
-            }
-            totalConcurrency += ((RevolverHttpServiceConfig) config).getApis().stream()
-                    .filter(a -> Strings
-                            .isNullOrEmpty(a.getRuntime().getThreadPool().getThreadPoolName()))
-                    .mapToInt(a -> a.getRuntime().getThreadPool().getConcurrency()).sum();
 
-            ((RevolverHttpServiceConfig) config).setConnectionPoolSize(totalConcurrency);
+            setTotalConcurrencyForService(config);
+            setApiSettings(config);
 
-            ((RevolverHttpServiceConfig) config).getApis().forEach(a -> {
-                String key = config.getService() + "." + a.getApi();
-                API_STATUS.put(key, true);
-                apiConfig.put(key, a);
-                if (a.getRuntime() != null && a.getRuntime().getThreadPool() != null) {
-                    a.getRuntime().getThreadPool()
-                            .setInitialConcurrency(a.getRuntime().getThreadPool().getConcurrency());
-                }
-                if (null != a.getSplitConfig() && a.getSplitConfig().isEnabled()) {
-                    updateSplitConfig(a);
-                    if (CollectionUtils
-                            .isNotEmpty(a.getSplitConfig().getPathExpressionSplitConfigs())) {
-
-                        List<PathExpressionSplitConfig> sortedOnOrder = a.getSplitConfig()
-                                .getPathExpressionSplitConfigs().stream()
-                                .sorted(Comparator.comparing(PathExpressionSplitConfig::getOrder))
-                                .collect(Collectors.toList());
-                        a.getSplitConfig().setPathExpressionSplitConfigs(sortedOnOrder);
-                    }
-                }
-
-            });
             generateApiConfigMap((RevolverHttpServiceConfig) config);
             serviceNameResolver.register(revolverHttpServiceConfig.getEndpoint());
         }
+    }
+
+    private static void setApiSettings(RevolverServiceConfig config) {
+        ((RevolverHttpServiceConfig) config).getApis().forEach(a -> {
+            String key = config.getService() + "." + a.getApi();
+            apiStatus.put(key, true);
+            apiConfig.put(key, a);
+            if (a.getRuntime() != null && a.getRuntime().getThreadPool() != null) {
+                if (a.getRuntime().getThreadPool().getInitialConcurrency() == 0) {
+                    a.getRuntime().getThreadPool()
+                            .setInitialConcurrency(a.getRuntime().getThreadPool().getConcurrency());
+                }
+            }
+            if (null != a.getSplitConfig() && a.getSplitConfig().isEnabled()) {
+                updateSplitConfig(a);
+                if (CollectionUtils
+                        .isNotEmpty(a.getSplitConfig().getPathExpressionSplitConfigs())) {
+
+                    List<PathExpressionSplitConfig> sortedOnOrder = a.getSplitConfig()
+                            .getPathExpressionSplitConfigs().stream()
+                            .sorted(Comparator.comparing(PathExpressionSplitConfig::getOrder))
+                            .collect(Collectors.toList());
+                    a.getSplitConfig().setPathExpressionSplitConfigs(sortedOnOrder);
+                }
+            }
+        });
+    }
+
+    private static void setTotalConcurrencyForService(RevolverServiceConfig config) {
+        //Adjust connectionPool size to make sure we don't starve connections. Guard against misconfiguration
+        //1. Add concurrency from thread pool groups
+        //2. Add concurrency from apis which do not belong to any thread pool group
+        int totalConcurrency = 0;
+        if (config.getThreadPoolGroupConfig() != null) {
+            totalConcurrency = config.getThreadPoolGroupConfig().getThreadPools().stream()
+                    .mapToInt(ThreadPoolConfig::getConcurrency).sum();
+            config.getThreadPoolGroupConfig().getThreadPools()
+                    .forEach(a -> {
+                        if (a.getInitialConcurrency() == 0) {
+                            log.info("Initial Concurrency : {}, Thread Pool : {}", a.getInitialConcurrency(),
+                                    a.getThreadPoolName());
+                            a.setInitialConcurrency(a.getConcurrency());
+                        }
+                    });
+        }
+        totalConcurrency += ((RevolverHttpServiceConfig) config).getApis().stream()
+                .filter(a -> Strings
+                        .isNullOrEmpty(a.getRuntime().getThreadPool().getThreadPoolName()))
+                .mapToInt(a -> a.getRuntime().getThreadPool().getConcurrency()).sum();
+
+        ((RevolverHttpServiceConfig) config).setConnectionPoolSize(totalConcurrency);
     }
 
     private static void updateSplitConfig(RevolverHttpApiConfig apiConfig) {
@@ -376,19 +394,34 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
     private void initializeRevolver(T configuration, Environment environment) {
         revolverConfig = getRevolverConfig(configuration);
+        ServiceDiscoveryConfig serviceDiscoveryConfig = revolverConfig.getServiceDiscoveryConfig();
+        if (serviceDiscoveryConfig == null) {
+            log.info("ServiceDiscovery in null");
+            serviceDiscoveryConfig = ServiceDiscoveryConfig.builder().build();
+        }
+        log.info("ServiceDiscovery : " + serviceDiscoveryConfig);
         if (revolverConfig.getServiceResolverConfig() != null) {
             serviceNameResolver = revolverConfig.getServiceResolverConfig().isUseCurator()
                     ? RevolverServiceResolver.usingCurator().curatorFramework(getCurator())
                     .objectMapper(environment.getObjectMapper())
-                    .resolverConfig(revolverConfig.getServiceResolverConfig()).build()
+                    .resolverConfig(revolverConfig.getServiceResolverConfig())
+                    .serviceDiscoveryConfig(serviceDiscoveryConfig).build()
                     : RevolverServiceResolver.builder()
                             .resolverConfig(revolverConfig.getServiceResolverConfig())
-                            .objectMapper(environment.getObjectMapper()).build();
+                            .objectMapper(environment.getObjectMapper()).
+                                    serviceDiscoveryConfig(serviceDiscoveryConfig).build();
         } else {
             serviceNameResolver = RevolverServiceResolver.builder()
-                    .objectMapper(environment.getObjectMapper()).build();
+                    .objectMapper(environment.getObjectMapper())
+                    .serviceDiscoveryConfig(serviceDiscoveryConfig).build();
         }
         loadServiceConfiguration(revolverConfig);
+        try {
+            serviceNameResolver.getExecutorService()
+                    .awaitTermination(serviceDiscoveryConfig.getWaitForDiscoveryInMs(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            log.error("Error occurred in service discovery completion : ", e);
+        }
     }
 
     private static void registerHttpCommand(RevolverServiceConfig config) {
