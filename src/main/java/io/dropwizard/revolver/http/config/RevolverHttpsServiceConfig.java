@@ -64,7 +64,8 @@ public class RevolverHttpsServiceConfig extends RevolverServiceConfig {
             @Singular("api") Set<RevolverHttpApiConfig> apis, boolean trackingHeaders,
             boolean compression, int connectionKeepAliveInMillis,
             ThreadPoolGroupConfig threadPoolGroupConfig,
-            RevolverHttpServiceSplitConfig serviceSplitConfig, SentinelCommandConfig sentinelCommandConfig) {
+            RevolverHttpServiceSplitConfig serviceSplitConfig,
+            SentinelCommandConfig sentinelCommandConfig) {
         super(type, service, sentinelCommandConfig);
         this.endpoint = enpoint;
         this.connectionPoolSize = connectionPoolSize;
