@@ -6,6 +6,7 @@ import io.dropwizard.revolver.core.config.HystrixCommandConfig;
 import io.dropwizard.revolver.core.config.RevolverConfig;
 import io.dropwizard.revolver.core.config.RevolverServiceConfig;
 import io.dropwizard.revolver.core.config.ThreadPoolGroupConfig;
+import io.dropwizard.revolver.core.model.RevolverExecutorType;
 import io.dropwizard.revolver.http.config.RevolverHttpServiceConfig;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
@@ -116,11 +117,15 @@ public class ResilienceUtil {
                         });
             }
         }
+        poolVsCircuitBreaker.forEach((s, circuitBreaker) -> {
+            log.info("Resilience circuit breaker : {}, circuit break config : {} ", s, circuitBreaker);
+        });
         resilienceHttpContext.setPoolVsCircuitBreaker(poolVsCircuitBreaker);
     }
 
     private static void initializeBulkHeads(RevolverConfig revolverConfig,
             ResilienceHttpContext resilienceHttpContext) {
+        log.info("Initializing resilience bulk heads");
         Map<String, Bulkhead> poolVsBulkHead = Maps.newHashMap();
 
         for (RevolverServiceConfig revolverServiceConfig : revolverConfig.getServices()) {
@@ -143,6 +148,10 @@ public class ResilienceUtil {
                                 if (hystrixCommandConfig == null || hystrixCommandConfig.getThreadPool() == null) {
                                     return;
                                 }
+                                if (RevolverExecutorType.RESILIENCE == revolverHttpApiConfig
+                                        .getRevolverExecutorType()) {
+                                    log.info("API is executing via resilience : {} ", revolverHttpApiConfig.getApi());
+                                }
                                 String threadPoolName = hystrixCommandConfig.getThreadPool().getThreadPoolName();
                                 if (StringUtils.isEmpty(threadPoolName)) {
                                     threadPoolName =
@@ -159,12 +168,15 @@ public class ResilienceUtil {
                         });
             }
         }
-
+        poolVsBulkHead.forEach((s, bulkhead) -> {
+            log.info("Resilience bulk head Key : {}, bulk head value : {} ", s, bulkhead.getBulkheadConfig());
+        });
         resilienceHttpContext.setPoolVsBulkHeadMap(poolVsBulkHead);
     }
 
     private static void initializeTimeout(RevolverConfig revolverConfig,
             ResilienceHttpContext resilienceHttpContext) {
+        log.info("Initializing resilience time out");
         Map<String, Integer> poolVsTimeout = Maps.newHashMap();
 
         for (RevolverServiceConfig revolverServiceConfig : revolverConfig.getServices()) {
@@ -195,8 +207,10 @@ public class ResilienceUtil {
                             }
                         });
             }
+            poolVsTimeout.forEach((s, timeout) -> {
+                log.info("Resilience timeout  Key : {}, timeput value : {} ", s, timeout);
+            });
         }
-
         resilienceHttpContext.setPoolVsTimeout(poolVsTimeout);
     }
 

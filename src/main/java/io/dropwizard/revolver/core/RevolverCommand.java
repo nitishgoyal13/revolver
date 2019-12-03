@@ -81,7 +81,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
                             normalizedRequest).executeSync();
                     break;
                 case RESILIENCE:
-                    response = (ResponseType) new ResilienceCommandHelper<>(
+                    response = new ResilienceCommandHelper<>(
                             this.context, this,
                             normalizedRequest).executeSync();
                     break;
