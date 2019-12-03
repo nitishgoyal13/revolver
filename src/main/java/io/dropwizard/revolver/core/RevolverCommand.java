@@ -75,6 +75,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
         try {
             ResponseType response;
             RevolverExecutorType revolverExecutorType = getExecutionType(this.getApiConfiguration());
+            log.info("Execution type : " + revolverExecutorType);
             switch (revolverExecutorType) {
                 case SENTINEL:
                     response = (ResponseType) new SentinelCommandHandler(
