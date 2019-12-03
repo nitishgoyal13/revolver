@@ -117,7 +117,6 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
         } else {
             ttl = serviceConfiguration.getRuntime().getThreadPool().getTimeout();
         }
-        log.info("ttl : " + ttl);
         TimeLimiterConfig config
                 = TimeLimiterConfig.custom().timeoutDuration(Duration.ofMillis(ttl)).build();
         return TimeLimiter.of(config);
@@ -135,11 +134,9 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
 
         CircuitBreaker circuitBreaker = getCircuitBreaker(resilienceHttpContext, request,
                 handler.getServiceConfiguration(), handler.getApiConfiguration());
-        log.info("Circuit breaker :" + circuitBreaker);
 
         Bulkhead bulkhead = getBulkHead(resilienceHttpContext, request, handler.getServiceConfiguration(),
                 handler.getApiConfiguration());
-        log.info("Bulk head : " + bulkhead);
 
         TimeLimiter timeLimiter = getTimeoutConfig(resilienceHttpContext, handler.getServiceConfiguration(),
                 handler.getApiConfiguration());
