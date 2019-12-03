@@ -118,7 +118,8 @@ public class ResilienceUtil {
             }
         }
         poolVsCircuitBreaker.forEach((s, circuitBreaker) -> {
-            log.info("Resilience circuit breaker : {}, circuit break config : {} ", s, circuitBreaker);
+            log.info("Resilience circuit breaker : {}, circuit break config : {} ", s,
+                    circuitBreaker.getCircuitBreakerConfig().getFailureRateThreshold());
         });
         resilienceHttpContext.setPoolVsCircuitBreaker(poolVsCircuitBreaker);
     }
@@ -169,7 +170,8 @@ public class ResilienceUtil {
             }
         }
         poolVsBulkHead.forEach((s, bulkhead) -> {
-            log.info("Resilience bulk head Key : {}, bulk head value : {} ", s, bulkhead.getBulkheadConfig());
+            log.info("Resilience bulk head Key : {}, bulk head value : {} ", s,
+                    bulkhead.getBulkheadConfig().getMaxConcurrentCalls());
         });
         resilienceHttpContext.setPoolVsBulkHeadMap(poolVsBulkHead);
     }

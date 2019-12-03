@@ -31,6 +31,7 @@ import io.dropwizard.revolver.core.util.HystrixCommandHelper;
 import io.dropwizard.revolver.core.util.RevolverCommandHelper;
 import io.dropwizard.revolver.core.util.RevolverExceptionHelper;
 import io.dropwizard.revolver.http.RevolverHttpContext;
+import io.dropwizard.revolver.http.config.RevolverHttpApiConfig;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
@@ -73,7 +74,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
         RevolverCommandHelper.addContextInfo(RevolverCommandHelper.getName(request), traceInfo);
         try {
             ResponseType response;
-            RevolverExecutorType revolverExecutorType = request.getRevolverExecutorType();
+            RevolverExecutorType revolverExecutorType = getExecutionType(this.getApiConfiguration());
             switch (revolverExecutorType) {
                 case SENTINEL:
                     response = (ResponseType) new SentinelCommandHandler(
@@ -110,6 +111,13 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
             throw new RevolverExecutionException(RevolverExecutionException.Type.SERVICE_ERROR,
                     rootCause);
         }
+    }
+
+    private RevolverExecutorType getExecutionType(CommandHandlerConfigType apiConfiguration) {
+        if (apiConfiguration instanceof RevolverHttpApiConfig) {
+            return ((RevolverHttpApiConfig) apiConfiguration).getRevolverExecutorType();
+        }
+        return RevolverExecutorType.HYSTRIX;
     }
 
     @SuppressWarnings("unchecked")
