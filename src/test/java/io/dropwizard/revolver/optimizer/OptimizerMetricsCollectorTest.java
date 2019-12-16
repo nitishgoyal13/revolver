@@ -35,7 +35,7 @@ public class OptimizerMetricsCollectorTest extends BaseRevolverTest {
     public static final ResourceTestRule resources = ResourceTestRule.builder().addResource(
             new RevolverRequestResource(environment.getObjectMapper(),
                     RevolverBundle.msgPackObjectMapper, inMemoryPersistenceProvider,
-                    callbackHandler, new MetricRegistry(), revolverConfig)).build();
+                    callbackHandler, new MetricRegistry(), revolverConfigHolder)).build();
 
     @Override
     @Before

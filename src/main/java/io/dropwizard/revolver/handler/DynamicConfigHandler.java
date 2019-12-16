@@ -26,6 +26,7 @@ import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.revolver.RevolverBundle;
 import io.dropwizard.revolver.core.config.RevolverConfig;
+import io.dropwizard.revolver.core.config.RevolverConfigHolder;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -37,7 +38,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 @Slf4j
 public class DynamicConfigHandler implements Managed {
 
-    private RevolverConfig revolverConfig;
+    private RevolverConfigHolder revolverConfigHolder;
 
     private ConfigSource configSource;
 
@@ -53,10 +54,10 @@ public class DynamicConfigHandler implements Managed {
 
     private RevolverBundle revolverBundle;
 
-    public DynamicConfigHandler(String configAttribute, RevolverConfig revolverConfig,
+    public DynamicConfigHandler(String configAttribute, RevolverConfigHolder revolverConfigHolder,
             ObjectMapper objectMapper, ConfigSource configSource, RevolverBundle revolverBundle) {
         this.configAttribute = configAttribute;
-        this.revolverConfig = revolverConfig;
+        this.revolverConfigHolder = revolverConfigHolder;
         this.configSource = configSource;
         this.scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
         this.objectMapper = objectMapper.copy();
@@ -79,7 +80,7 @@ public class DynamicConfigHandler implements Managed {
     @Override
     public void start() {
         scheduledExecutorService.scheduleWithFixedDelay(this::refreshConfig, 120,
-                revolverConfig.getConfigPollIntervalSeconds(), TimeUnit.SECONDS);
+                revolverConfigHolder.getConfig().getConfigPollIntervalSeconds(), TimeUnit.SECONDS);
     }
 
     public String refreshConfig() {
@@ -94,6 +95,7 @@ public class DynamicConfigHandler implements Managed {
                 log.info("Refreshing config with new hash: {}", curHash);
                 RevolverConfig revolverConfig = objectMapper
                         .readValue(substituted, RevolverConfig.class);
+                revolverConfigHolder.setConfig(revolverConfig);
                 RevolverBundle.loadServiceConfiguration(revolverConfig);
                 this.prevConfigHash = curHash;
                 prevLoadTime = System.currentTimeMillis();

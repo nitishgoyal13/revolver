@@ -35,6 +35,7 @@ import io.dropwizard.revolver.core.RevolverExecutionException;
 import io.dropwizard.revolver.core.config.AerospikeMailBoxConfig;
 import io.dropwizard.revolver.core.config.InMemoryMailBoxConfig;
 import io.dropwizard.revolver.core.config.RevolverConfig;
+import io.dropwizard.revolver.core.config.RevolverConfigHolder;
 import io.dropwizard.revolver.core.config.RevolverServiceConfig;
 import io.dropwizard.revolver.core.config.ServiceDiscoveryConfig;
 import io.dropwizard.revolver.core.config.hystrix.ThreadPoolConfig;
@@ -107,7 +108,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
     private static MultivaluedMap<String, ApiPathMap> serviceToPathMap = new MultivaluedHashMap<>();
     private static Map<String, Integer> serviceConnectionPoolMap = new ConcurrentHashMap<>();
 
-    private static RevolverConfig revolverConfig;
+    private static RevolverConfigHolder revolverConfigHolder;
 
     private static Map<String, RevolverHttpApiConfig> generateApiConfigMap(
             RevolverHttpServiceConfig serviceConfiguration) {
@@ -168,17 +169,9 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
                     "No api spec defined for service: " + service);
         }
         return RevolverHttpCommand.builder().apiConfiguration(apiConfig.get(serviceKey))
-                .clientConfiguration(revolverConfig.getClientConfig())
-                .runtimeConfig(revolverConfig.getGlobal())
+                .clientConfiguration(revolverConfigHolder.getConfig().getClientConfig())
+                .runtimeConfig(revolverConfigHolder.getConfig().getGlobal())
                 .serviceConfiguration(serviceConfig.get(service)).build();
-    }
-
-    private static RevolverHttpCommand getTestHttpCommand(RevolverHttpServiceConfig serviceConfig) {
-        return RevolverHttpCommand.builder().apiConfiguration(RevolverHttpApiConfig.configBuilder()
-                .method(RevolverHttpApiConfig.RequestMethod.GET).api("test").path("/").build())
-                .clientConfiguration(revolverConfig.getClientConfig())
-                .runtimeConfig(revolverConfig.getGlobal()).serviceConfiguration(serviceConfig)
-                .build();
     }
 
     public static RevolverServiceResolver getServiceNameResolver() {
@@ -186,18 +179,20 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
     }
 
     public static void loadServiceConfiguration(RevolverConfig revolverConfig) {
-        for (RevolverServiceConfig config : revolverConfig.getServices()) {
-            String type = config.getType();
-            switch (type) {
-                case "http":
-                    registerHttpCommand(config);
-                    break;
-                case "https":
-                    registerHttpsCommand(config);
-                    break;
-                default:
-                    log.warn("Unsupported Service type: " + type);
+        synchronized (RevolverBundle.class) {
+            for (RevolverServiceConfig config : revolverConfig.getServices()) {
+                String type = config.getType();
+                switch (type) {
+                    case "http":
+                        registerHttpCommand(config);
+                        break;
+                    case "https":
+                        registerHttpsCommand(config);
+                        break;
+                    default:
+                        log.warn("Unsupported Service type: " + type);
 
+                }
             }
         }
     }
@@ -357,12 +352,12 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
         HystrixPlugins.getInstance().registerMetricsPublisher(metricsPublisher);
         initializeRevolver(configuration, environment);
-        if (Strings.isNullOrEmpty(revolverConfig.getHystrixStreamPath())) {
+        if (Strings.isNullOrEmpty(revolverConfigHolder.getConfig().getHystrixStreamPath())) {
             environment.getApplicationContext()
                     .addServlet(HystrixMetricsStreamServlet.class, "/hystrix.stream");
         } else {
             environment.getApplicationContext().addServlet(HystrixMetricsStreamServlet.class,
-                    revolverConfig.getHystrixStreamPath());
+                    revolverConfigHolder.getConfig().getHystrixStreamPath());
         }
         environment.jersey().register(
                 new RevolverExceptionMapper(environment.getObjectMapper(), msgPackObjectMapper));
@@ -371,27 +366,29 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         PersistenceProvider persistenceProvider = getPersistenceProvider(configuration,
                 environment);
         InlineCallbackHandler callbackHandler = InlineCallbackHandler.builder()
-                .persistenceProvider(persistenceProvider).revolverConfig(revolverConfig).build();
+                .persistenceProvider(persistenceProvider)
+                .revolverConfigHolder(revolverConfigHolder)
+                .build();
 
         setupOptimizer(metrics, scheduledExecutorService, configUpdaterExecutorService);
 
-        environment.jersey().register(new RevolverRequestFilter(revolverConfig));
+        environment.jersey().register(new RevolverRequestFilter(revolverConfigHolder));
 
         environment.jersey().register(
                 new RevolverRequestResource(environment.getObjectMapper(), msgPackObjectMapper,
-                        persistenceProvider, callbackHandler, metrics, revolverConfig));
+                        persistenceProvider, callbackHandler, metrics, revolverConfigHolder));
         environment.jersey()
                 .register(new RevolverCallbackResource(persistenceProvider, callbackHandler));
         environment.jersey().register(
                 new RevolverMailboxResource(persistenceProvider, environment.getObjectMapper(),
                         msgPackObjectMapper, Collections.unmodifiableMap(apiConfig)));
-        environment.jersey().register(new RevolverMetadataResource(revolverConfig));
+        environment.jersey().register(new RevolverMetadataResource(revolverConfigHolder));
 
         DynamicConfigHandler dynamicConfigHandler = new DynamicConfigHandler(
-                getRevolverConfigAttribute(), revolverConfig, environment.getObjectMapper(),
+                getRevolverConfigAttribute(), revolverConfigHolder, environment.getObjectMapper(),
                 getConfigSource(), this);
         //Register dynamic config poller if it is enabled
-        if (revolverConfig.isDynamicConfig()) {
+        if (revolverConfigHolder.getConfig().isDynamicConfig()) {
             environment.lifecycle().manage(dynamicConfigHandler);
         }
         environment.jersey().register(new RevolverConfigResource(dynamicConfigHandler));
@@ -449,8 +446,10 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
     public abstract CuratorFramework getCurator();
 
     private void initializeRevolver(T configuration, Environment environment) {
-        revolverConfig = getRevolverConfig(configuration);
-        ServiceDiscoveryConfig serviceDiscoveryConfig = revolverConfig.getServiceDiscoveryConfig();
+        RevolverConfig revolverConfig = getRevolverConfig(configuration);
+        revolverConfigHolder = new RevolverConfigHolder(getRevolverConfig(configuration));
+        ServiceDiscoveryConfig serviceDiscoveryConfig = revolverConfigHolder.getConfig()
+                .getServiceDiscoveryConfig();
         if (serviceDiscoveryConfig == null) {
             log.info("ServiceDiscovery in null");
             serviceDiscoveryConfig = ServiceDiscoveryConfig.builder().build();
@@ -482,7 +481,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
     private void setupOptimizer(MetricRegistry metrics, ScheduledExecutorService scheduledExecutorService,
             ScheduledExecutorService configUpdaterExecutorService) {
-        OptimizerConfig optimizerConfig = revolverConfig.getOptimizerConfig();
+        OptimizerConfig optimizerConfig = revolverConfigHolder.getConfig().getOptimizerConfig();
         if (optimizerConfig != null && optimizerConfig.isEnabled()) {
             log.info("Optimizer config enabled");
             OptimizerMetricsCollectorConfig optimizerMetricsCollectorConfig = optimizerConfig
@@ -503,7 +502,8 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
             RevolverConfigUpdater revolverConfigUpdater = RevolverConfigUpdater.builder()
                     .optimizerConfig(optimizerConfig)
-                    .optimizerMetricsCache(optimizerMetricsCache).revolverConfig(revolverConfig)
+                    .optimizerMetricsCache(optimizerMetricsCache)
+                    .revolverConfigHolder(revolverConfigHolder)
                     .build();
 
             configUpdaterExecutorService.scheduleAtFixedRate(revolverConfigUpdater,

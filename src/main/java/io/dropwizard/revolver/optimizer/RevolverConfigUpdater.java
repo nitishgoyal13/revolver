@@ -4,6 +4,7 @@ import com.google.common.collect.Maps;
 import io.dropwizard.revolver.RevolverBundle;
 import io.dropwizard.revolver.core.config.ApiLatencyConfig;
 import io.dropwizard.revolver.core.config.RevolverConfig;
+import io.dropwizard.revolver.core.config.RevolverConfigHolder;
 import io.dropwizard.revolver.core.config.RevolverServiceConfig;
 import io.dropwizard.revolver.core.config.hystrix.ThreadPoolConfig;
 import io.dropwizard.revolver.http.config.RevolverHttpApiConfig;
@@ -32,7 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RevolverConfigUpdater implements Runnable {
 
-    private RevolverConfig revolverConfig;
+    private RevolverConfigHolder revolverConfigHolder;
     private OptimizerConfig optimizerConfig;
     private OptimizerMetricsCache optimizerMetricsCache;
 
@@ -166,7 +167,7 @@ public class RevolverConfigUpdater implements Runnable {
     private void updateRevolverConfig(
             Map<String, OptimizerAggregatedMetrics> optimizerAggregatedMetricsMap) {
         AtomicBoolean configUpdated = new AtomicBoolean();
-        revolverConfig.getServices().forEach(revolverServiceConfig -> {
+        revolverConfigHolder.getConfig().getServices().forEach(revolverServiceConfig -> {
             if (revolverServiceConfig.getThreadPoolGroupConfig() != null) {
                 revolverServiceConfig.getThreadPoolGroupConfig().getThreadPools()
                         .forEach(threadPoolConfig -> {
@@ -183,7 +184,7 @@ public class RevolverConfigUpdater implements Runnable {
         });
 
         if (configUpdated.get()) {
-            RevolverBundle.loadServiceConfiguration(revolverConfig);
+            RevolverBundle.loadServiceConfiguration(revolverConfigHolder.getConfig());
         }
     }
 
