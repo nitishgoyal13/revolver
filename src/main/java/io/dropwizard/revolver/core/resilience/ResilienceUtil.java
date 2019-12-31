@@ -33,7 +33,6 @@ public class ResilienceUtil {
     private static final Map<String, String> DEFAULT_KEY_VALUE_MAP = Maps.newHashMap();
     private static final String METRIC_PREFIX = "resilience";
     private static final String DEFAULT_CIRCUIT_BREAKER = "revolver";
-    private static final Map<String, Bulkhead> POOL_VS_BULK_HEAD = Maps.newHashMap();
 
     static {
         DEFAULT_KEY_VALUE_MAP.put(METRIC_PREFIX + ".step", "PT1M");
@@ -108,17 +107,18 @@ public class ResilienceUtil {
     private static void initializeBulkHeads(RevolverConfig revolverConfig,
             ResilienceHttpContext resilienceHttpContext) {
         log.info("Initializing resilience bulk heads");
+        Map<String, Bulkhead> poolVsBulkHead = Maps.newHashMap();
 
         for (RevolverServiceConfig revolverServiceConfig : revolverConfig.getServices()) {
 
-            updateBulkheadsForThreadPools(revolverServiceConfig);
-            updateBulkheadsForApiConfigs(revolverServiceConfig);
-            updateBulkHeadsForDefaultServiceConfig(revolverServiceConfig);
+            updateBulkheadsForThreadPools(poolVsBulkHead, revolverServiceConfig);
+            updateBulkheadsForApiConfigs(poolVsBulkHead, revolverServiceConfig);
+            updateBulkHeadsForDefaultServiceConfig(poolVsBulkHead, revolverServiceConfig);
         }
 
-        POOL_VS_BULK_HEAD.forEach((s, bulkhead) -> log.info("Resilience bulk head Key : {}, bulk head value : {} ", s,
+        poolVsBulkHead.forEach((s, bulkhead) -> log.info("Resilience bulk head Key : {}, bulk head value : {} ", s,
                 bulkhead.getBulkheadConfig().getMaxConcurrentCalls()));
-        resilienceHttpContext.setPoolVsBulkHeadMap(POOL_VS_BULK_HEAD);
+        resilienceHttpContext.setPoolVsBulkHeadMap(poolVsBulkHead);
     }
 
     private static void initializeTimeout(RevolverConfig revolverConfig, ResilienceHttpContext resilienceHttpContext) {
@@ -177,7 +177,9 @@ public class ResilienceUtil {
 
     }
 
-    private static void updateBulkheadsForApiConfigs(RevolverServiceConfig revolverServiceConfig) {
+    private static void updateBulkheadsForApiConfigs(
+            Map<String, Bulkhead> poolVsBulkHead,
+            RevolverServiceConfig revolverServiceConfig) {
         if (revolverServiceConfig instanceof RevolverHttpServiceConfig) {
             ((RevolverHttpServiceConfig) revolverServiceConfig).getApis()
                     .forEach(revolverHttpApiConfig -> {
@@ -195,34 +197,16 @@ public class ResilienceUtil {
                                     revolverServiceConfig.getService() + "." + revolverHttpApiConfig.getApi();
                             log.info("ThreadPool Name : {}, Concurrency : {} ", threadPoolName,
                                     hystrixCommandConfig.getThreadPool().getConcurrency());
-                            updateBulkheadRegistry(hystrixCommandConfig.getThreadPool(),
-                                    threadPoolName);
+                            poolVsBulkHead.put(revolverServiceConfig.getService(),
+                                    getBulkheadWithConcurrency(hystrixCommandConfig.getThreadPool().getConcurrency(),
+                                            revolverServiceConfig.getService()));
                         }
                     });
         }
     }
 
-    private static void updateBulkheadRegistry(ThreadPoolConfig threadPoolConfig, String threadPoolName) {
-        if (POOL_VS_BULK_HEAD.get(threadPoolName) == null) {
-            POOL_VS_BULK_HEAD.put(threadPoolName, bulkheadRegistry.bulkhead(
-                    threadPoolName,
-                    BulkheadConfig.custom().maxConcurrentCalls(
-                            threadPoolConfig
-                                    .getConcurrency())
-                            .build()));
-        } else {
-            POOL_VS_BULK_HEAD.put(threadPoolName,
-                    bulkheadRegistry.replace(
-                            threadPoolName,
-                            Bulkhead.of(threadPoolName,
-                                    BulkheadConfig.custom().maxConcurrentCalls(
-                                            threadPoolConfig
-                                                    .getConcurrency())
-                                            .build())).get());
-        }
-    }
-
     private static void updateBulkheadsForThreadPools(
+            Map<String, Bulkhead> poolVsBulkHead,
             RevolverServiceConfig revolverServiceConfig) {
         ThreadPoolGroupConfig threadPoolGroupConfig = revolverServiceConfig.getThreadPoolGroupConfig();
         if (threadPoolGroupConfig != null) {
@@ -230,10 +214,20 @@ public class ResilienceUtil {
                 String threadPoolName =
                         getThreadPoolName(revolverServiceConfig, threadPoolConfig);
                 log.info("ThreadPool Name : {}, Concurrency : {} ", threadPoolName, threadPoolConfig.getConcurrency());
-                updateBulkheadRegistry(threadPoolConfig, threadPoolName);
+                poolVsBulkHead.put(threadPoolName,
+                        getBulkheadWithConcurrency(threadPoolConfig.getConcurrency(), threadPoolName));
             });
 
         }
+    }
+
+    private static Bulkhead getBulkheadWithConcurrency(int concurrency, String threadPoolName) {
+        bulkheadRegistry.remove(threadPoolName);
+        return bulkheadRegistry.bulkhead(
+                threadPoolName,
+                BulkheadConfig.custom()
+                        .maxConcurrentCalls(concurrency)
+                        .build());
     }
 
     private static String getThreadPoolName(RevolverServiceConfig revolverServiceConfig,
@@ -298,24 +292,16 @@ public class ResilienceUtil {
         return revolverServiceConfig.getService() + "." + revolverHttpApiConfig.getApi();
     }
 
-    private static void updateBulkHeadsForDefaultServiceConfig(RevolverServiceConfig revolverServiceConfig) {
+    private static void updateBulkHeadsForDefaultServiceConfig(
+            Map<String, Bulkhead> poolVsBulkHead,
+            RevolverServiceConfig revolverServiceConfig) {
         if (revolverServiceConfig instanceof RevolverHttpServiceConfig) {
             ThreadPoolConfig threadPoolConfig = revolverServiceConfig.getRuntime().getThreadPool();
             if (threadPoolConfig == null) {
                 return;
             }
-            if (POOL_VS_BULK_HEAD.get(revolverServiceConfig.getService()) == null) {
-                POOL_VS_BULK_HEAD.put(revolverServiceConfig.getService(), bulkheadRegistry
-                        .bulkhead(revolverServiceConfig.getService(),
-                                BulkheadConfig.custom().maxConcurrentCalls(threadPoolConfig.getConcurrency())
-                                        .build()));
-
-            } else {
-                POOL_VS_BULK_HEAD.put(revolverServiceConfig.getService(), bulkheadRegistry
-                        .replace(revolverServiceConfig.getService(), Bulkhead.of(revolverServiceConfig.getService(),
-                                BulkheadConfig.custom().maxConcurrentCalls(threadPoolConfig.getConcurrency()).build()))
-                        .get());
-            }
+            poolVsBulkHead.put(revolverServiceConfig.getService(),
+                    getBulkheadWithConcurrency(threadPoolConfig.getConcurrency(), revolverServiceConfig.getService()));
 
         }
     }
