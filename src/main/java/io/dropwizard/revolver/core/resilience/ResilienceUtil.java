@@ -197,7 +197,7 @@ public class ResilienceUtil {
                                     revolverServiceConfig.getService() + "." + revolverHttpApiConfig.getApi();
                             log.info("ThreadPool Name : {}, Concurrency : {} ", threadPoolName,
                                     hystrixCommandConfig.getThreadPool().getConcurrency());
-                            poolVsBulkHead.put(revolverServiceConfig.getService(),
+                            poolVsBulkHead.putIfAbsent(revolverServiceConfig.getService(),
                                     getBulkheadWithConcurrency(hystrixCommandConfig.getThreadPool().getConcurrency(),
                                             revolverServiceConfig.getService()));
                         }
@@ -214,7 +214,7 @@ public class ResilienceUtil {
                 String threadPoolName =
                         getThreadPoolName(revolverServiceConfig, threadPoolConfig);
                 log.info("ThreadPool Name : {}, Concurrency : {} ", threadPoolName, threadPoolConfig.getConcurrency());
-                poolVsBulkHead.put(threadPoolName,
+                poolVsBulkHead.putIfAbsent(threadPoolName,
                         getBulkheadWithConcurrency(threadPoolConfig.getConcurrency(), threadPoolName));
             });
 
@@ -300,7 +300,7 @@ public class ResilienceUtil {
             if (threadPoolConfig == null) {
                 return;
             }
-            poolVsBulkHead.put(revolverServiceConfig.getService(),
+            poolVsBulkHead.putIfAbsent(revolverServiceConfig.getService(),
                     getBulkheadWithConcurrency(threadPoolConfig.getConcurrency(), revolverServiceConfig.getService()));
 
         }
