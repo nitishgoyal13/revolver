@@ -197,7 +197,7 @@ public class ResilienceUtil {
                                     revolverServiceConfig.getService() + "." + revolverHttpApiConfig.getApi();
                             log.info("ThreadPool Name : {}, Concurrency : {} ", threadPoolName,
                                     hystrixCommandConfig.getThreadPool().getConcurrency());
-                            poolVsBulkHead.putIfAbsent(revolverServiceConfig.getService(),
+                            poolVsBulkHead.putIfAbsent(threadPoolName,
                                     getBulkheadWithConcurrency(hystrixCommandConfig.getThreadPool().getConcurrency(),
                                             revolverServiceConfig.getService()));
                         }
