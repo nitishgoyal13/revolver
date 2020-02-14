@@ -11,7 +11,6 @@ import com.codahale.metrics.MetricRegistry;
 import io.dropwizard.revolver.BaseRevolverTest;
 import io.dropwizard.revolver.RevolverBundle;
 import io.dropwizard.revolver.optimizer.utils.OptimizerUtils;
-import io.dropwizard.revolver.resource.RevolverRequestResource;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import java.io.IOException;
 import java.security.KeyManagementException;
