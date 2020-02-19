@@ -77,6 +77,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
             ResponseType response;
             RevolverExecutorType revolverExecutorType = getExecutionType(this.getServiceConfiguration(),
                     this.getApiConfiguration());
+            log.info("revolverExecutorType execute: {}", revolverExecutorType);
             switch (revolverExecutorType) {
                 case SENTINEL:
                     response = (ResponseType) new SentinelCommandHandler(
@@ -125,7 +126,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
             revolverExecutorType = ((RevolverHttpServiceConfig) serviceConfiguration).getRevolverExecutorType();
         }
         if (revolverExecutorType == null) {
-            revolverExecutorType = RevolverExecutorType.HYSTRIX;
+            revolverExecutorType = RevolverExecutorType.RESILIENCE;
         }
         return revolverExecutorType;
     }
@@ -138,7 +139,7 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
 
         RevolverExecutorType revolverExecutorType = getExecutionType(this.getServiceConfiguration(),
                 this.getApiConfiguration());
-        log.info("revolverExecutorType: {}", revolverExecutorType);
+        log.info("revolverExecutorType executeAsync: {}", revolverExecutorType);
         switch (revolverExecutorType) {
             case SENTINEL:
                 return new SentinelCommandHandler(
@@ -163,10 +164,13 @@ public abstract class RevolverCommand<RequestType extends RevolverRequest, Respo
 
         RevolverExecutorType revolverExecutorType = getExecutionType(this.getServiceConfiguration(),
                 this.getApiConfiguration());
+        log.info("revolverExecutorType executeAsyncAsObservable: {}", revolverExecutorType);
         switch (revolverExecutorType) {
             case SENTINEL:
                 return new SentinelCommandHandler<>(this.context, this, request).executeAsyncAsObservable();
-
+            case RESILIENCE:
+                return new ResilienceCommandHelper<>(
+                        this.context, this, normalizedRequest).executeAsyncAsObservable();
             case HYSTRIX:
             default:
                 return new HystrixCommandHandler<>(HystrixCommandHelper.setter(this, request.getApi()),

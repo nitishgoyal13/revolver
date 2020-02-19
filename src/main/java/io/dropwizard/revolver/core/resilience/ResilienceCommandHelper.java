@@ -31,6 +31,7 @@ import java.util.concurrent.Future;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import rx.Observable;
 
 /***
  Created by nitish.goyal on 22/11/19
@@ -77,6 +78,16 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
         } catch (Exception e) {
             throw getException(e);
         }
+    }
+
+    public Observable executeAsyncAsObservable() {
+        return Observable.fromCallable((() -> {
+            try {
+                return execute();
+            } catch (Exception e) {
+                throw getException(e);
+            }
+        }));
     }
 
     private ResponseType execute() throws Exception {
