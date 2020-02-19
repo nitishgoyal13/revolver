@@ -4,8 +4,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.revolver</groupId>
-    <artifactId>dropwizard-revolver-resilience4j</artifactId>
-    <version>1.0-15-29-CALLBACK</version>
+    <artifactId>dropwizard-callback-resilience4j</artifactId>
+    <version>1.0.2</version>
     <packaging>jar</packaging>
 
     <name>dropwizard-revolver</name>

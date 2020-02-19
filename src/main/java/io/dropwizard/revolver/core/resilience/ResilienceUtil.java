@@ -93,6 +93,7 @@ public class ResilienceUtil {
     private static void initializeCircuitBreakers(RevolverConfig revolverConfig,
             ResilienceHttpContext resilienceHttpContext) {
 
+        log.info("Initializing resilience circuit breakers");
         Map<String, CircuitBreaker> apiVsCircuitBreaker = Maps.newHashMap();
         resilienceHttpContext.setDefaultCircuitBreaker(circuitBreakerRegistry.circuitBreaker(DEFAULT_CIRCUIT_BREAKER));
 
