@@ -81,7 +81,7 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
 
     private ResponseType execute() throws Exception {
         ResilienceHttpContext resilienceHttpContext = getResilienceContext();
-
+        log.info("Executing via resilience");
         CircuitBreaker circuitBreaker = getCircuitBreaker(resilienceHttpContext, request,
                 handler.getServiceConfiguration(), handler.getApiConfiguration());
 
