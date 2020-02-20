@@ -1,6 +1,8 @@
 package io.dropwizard.revolver.core.resilience;
 
 import static io.dropwizard.revolver.core.resilience.ResilienceUtil.BULK_HEAD_DELIMITER;
+import static io.dropwizard.revolver.core.resilience.ResilienceUtil.DEFAULT_CIRCUIT_BREAKER;
+import static io.dropwizard.revolver.core.resilience.ResilienceUtil.circuitBreakerRegistry;
 import static io.dropwizard.revolver.core.resilience.ResilienceUtil.getApiName;
 import static io.dropwizard.revolver.core.resilience.ResilienceUtil.getCbName;
 import static io.dropwizard.revolver.core.resilience.ResilienceUtil.getThreadPoolNameForService;
@@ -229,7 +231,7 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
         circuitBreaker = resilienceHttpContext.getDefaultCircuitBreaker();
         log.info("DefaultCircuitBreaker : {}", circuitBreaker);
         if (circuitBreaker == null) {
-
+            circuitBreaker = circuitBreakerRegistry.circuitBreaker(DEFAULT_CIRCUIT_BREAKER);
         }
         return circuitBreaker;
     }

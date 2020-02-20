@@ -36,7 +36,7 @@ public class ResilienceUtil {
     public static final String BULK_HEAD_DELIMITER = "-";
     private static final Map<String, String> DEFAULT_KEY_VALUE_MAP = Maps.newHashMap();
     private static final String METRIC_PREFIX = "resilience";
-    private static final String DEFAULT_CIRCUIT_BREAKER = "revolver";
+    public static final String DEFAULT_CIRCUIT_BREAKER = "revolver";
     private static final Map<String, Bulkhead> POOL_VS_BULK_HEAD = Maps.newHashMap();
 
     static {
@@ -48,7 +48,7 @@ public class ResilienceUtil {
     }
 
     private static BulkheadRegistry bulkheadRegistry = BulkheadRegistry.ofDefaults();
-    private static CircuitBreakerRegistry circuitBreakerRegistry =
+    public static CircuitBreakerRegistry circuitBreakerRegistry =
             CircuitBreakerRegistry.ofDefaults();
 
     public static void initializeResilience(RevolverConfig revolverConfig,
