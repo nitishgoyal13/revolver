@@ -227,6 +227,10 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
         //Ideally should never happen
         log.info("No circuit breaker defined for service {}, api {}", request.getService(), request.getApi());
         circuitBreaker = resilienceHttpContext.getDefaultCircuitBreaker();
+        log.info("DefaultCircuitBreaker : {}", circuitBreaker);
+        if (circuitBreaker == null) {
+
+        }
         return circuitBreaker;
     }
 

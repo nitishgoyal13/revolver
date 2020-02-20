@@ -235,13 +235,15 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
     private static RevolverHttpContext getContext(RevolverExecutorType revolverExecutorType) {
         if (revolverExecutorType == null) {
-            return new RevolverHttpContext();
+            return resilienceHttpContext;
         }
         switch (revolverExecutorType) {
             case RESILIENCE:
                 return resilienceHttpContext;
+            case HYSTRIX:
+                return new RevolverHttpContext();
         }
-        return new RevolverHttpContext();
+        return resilienceHttpContext;
     }
 
     public static RevolverServiceResolver getServiceNameResolver() {
@@ -517,7 +519,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
     private void registerResources(Environment environment, MetricRegistry metrics,
             PersistenceProvider persistenceProvider, InlineCallbackHandler callbackHandler) {
-         environment.jersey().register(new RevolverMetadataResource(revolverConfig));
+        environment.jersey().register(new RevolverMetadataResource(revolverConfig));
         environment.jersey().register(
                 new RevolverMailboxResource(persistenceProvider, environment.getObjectMapper(),
                         MSG_PACK_OBJECT_MAPPER, Collections.unmodifiableMap(apiConfig)));
