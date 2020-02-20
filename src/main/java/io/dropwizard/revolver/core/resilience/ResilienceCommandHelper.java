@@ -94,7 +94,6 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
 
     private ResponseType execute() throws Exception {
         ResilienceHttpContext resilienceHttpContext = getResilienceContext();
-        log.info("Executing via resilience");
         CircuitBreaker circuitBreaker = getCircuitBreaker(resilienceHttpContext, request,
                 handler.getServiceConfiguration(), handler.getApiConfiguration());
 
@@ -165,7 +164,7 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
 
         if (ttl == 0) {
             //Ideally timeout should be set for all apis. This case should never happen
-            log.info("Timeout not set for api : {}", apiConfiguration.getApi());
+            log.debug("Timeout not set for api : {}", apiConfiguration.getApi());
             ttl = DEFAULT_TTL;
         }
         TimeLimiterConfig config
@@ -186,7 +185,7 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
                     bulkhead.getBulkheadConfig().getMaxWaitDuration());
             return bulkhead;
         }
-        log.info("No bulk head defined for threadPool : {} service : {}, api : {}", threadPoolName,
+        log.debug("No bulk head defined for threadPool : {} service : {}, api : {}", threadPoolName,
                 request.getService(), request.getApi());
         threadPoolName = serviceConfiguration.getService();
         if (StringUtils.isNotEmpty(threadPoolName)) {
@@ -195,7 +194,7 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
 
         if (bulkhead == null) {
             //Ideally should never happen
-            log.info("No bulk head defined for service : {}, api : {} threadPool : {}", request.getService(),
+            log.debug("No bulk head defined for service : {}, api : {} threadPool : {}", request.getService(),
                     request.getApi(), threadPoolName);
             bulkhead = Bulkhead.ofDefaults("revolver");
         }
@@ -227,9 +226,8 @@ public class ResilienceCommandHelper<RequestType extends RevolverRequest, Respon
         }
 
         //Ideally should never happen
-        log.info("No circuit breaker defined for service {}, api {}", request.getService(), request.getApi());
         circuitBreaker = resilienceHttpContext.getDefaultCircuitBreaker();
-        log.info("DefaultCircuitBreaker : {}", circuitBreaker);
+        log.debug("DefaultCircuitBreaker : {}", circuitBreaker);
         if (circuitBreaker == null) {
             circuitBreaker = circuitBreakerRegistry.circuitBreaker(DEFAULT_CIRCUIT_BREAKER);
         }
