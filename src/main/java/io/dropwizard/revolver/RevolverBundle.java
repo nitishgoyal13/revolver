@@ -31,11 +31,7 @@ import io.dropwizard.msgpack.MsgPackBundle;
 import io.dropwizard.revolver.aeroapike.AerospikeConnectionManager;
 import io.dropwizard.revolver.callback.InlineCallbackHandler;
 import io.dropwizard.revolver.core.RevolverExecutionException;
-import io.dropwizard.revolver.core.config.AerospikeMailBoxConfig;
-import io.dropwizard.revolver.core.config.InMemoryMailBoxConfig;
-import io.dropwizard.revolver.core.config.RevolverConfig;
-import io.dropwizard.revolver.core.config.RevolverServiceConfig;
-import io.dropwizard.revolver.core.config.ServiceDiscoveryConfig;
+import io.dropwizard.revolver.core.config.*;
 import io.dropwizard.revolver.core.config.hystrix.HystrixUtil;
 import io.dropwizard.revolver.core.config.hystrix.ThreadPoolConfig;
 import io.dropwizard.revolver.core.model.RevolverExecutorType;
@@ -66,33 +62,26 @@ import io.dropwizard.revolver.optimizer.config.OptimizerConfig;
 import io.dropwizard.revolver.persistence.AeroSpikePersistenceProvider;
 import io.dropwizard.revolver.persistence.InMemoryPersistenceProvider;
 import io.dropwizard.revolver.persistence.PersistenceProvider;
-import io.dropwizard.revolver.resource.RevolverApiManageResource;
-import io.dropwizard.revolver.resource.RevolverConfigResource;
-import io.dropwizard.revolver.resource.RevolverMailboxResource;
-import io.dropwizard.revolver.resource.RevolverMailboxResourceV2;
-import io.dropwizard.revolver.resource.RevolverMetadataResource;
+import io.dropwizard.revolver.resource.*;
 import io.dropwizard.revolver.splitting.PathExpressionSplitConfig;
 import io.dropwizard.revolver.splitting.SplitConfig;
 import io.dropwizard.riemann.RiemannBundle;
 import io.dropwizard.riemann.RiemannConfig;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.apache.curator.framework.CuratorFramework;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
+
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.ws.rs.core.MultivaluedHashMap;
-import javax.ws.rs.core.MultivaluedMap;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.apache.curator.framework.CuratorFramework;
-import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 /**
  * @author phaneesh
@@ -295,7 +284,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
     }
 
     private static void registerCommand(RevolverServiceConfig config,
-            RevolverHttpServiceConfig revolverHttpServiceConfig) {
+                                        RevolverHttpServiceConfig revolverHttpServiceConfig) {
 
         if (config instanceof RevolverHttpServiceConfig) {
 
@@ -424,9 +413,9 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
                     .resolverConfig(revolverConfig.getServiceResolverConfig())
                     .serviceDiscoveryConfig(serviceDiscoveryConfig).build()
                     : RevolverServiceResolver.builder()
-                            .resolverConfig(revolverConfig.getServiceResolverConfig())
-                            .objectMapper(environment.getObjectMapper()).
-                                    serviceDiscoveryConfig(serviceDiscoveryConfig).build();
+                    .resolverConfig(revolverConfig.getServiceResolverConfig())
+                    .objectMapper(environment.getObjectMapper()).
+                            serviceDiscoveryConfig(serviceDiscoveryConfig).build();
         } else {
             serviceNameResolver = RevolverServiceResolver.builder()
                     .objectMapper(environment.getObjectMapper())
@@ -518,7 +507,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
 
 
     private void registerResources(Environment environment, MetricRegistry metrics,
-            PersistenceProvider persistenceProvider, InlineCallbackHandler callbackHandler) {
+                                   PersistenceProvider persistenceProvider, InlineCallbackHandler callbackHandler) {
         environment.jersey().register(new RevolverMetadataResource(revolverConfig));
         environment.jersey().register(
                 new RevolverMailboxResource(persistenceProvider, environment.getObjectMapper(),
@@ -535,6 +524,7 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         }
         environment.jersey().register(new RevolverConfigResource(dynamicConfigHandler));
         environment.jersey().register(new RevolverApiManageResource());
+        environment.jersey().register(new RevolverCallbackResource(persistenceProvider, callbackHandler));
     }
 
     private void registerFilters(Environment environment) {
