@@ -79,6 +79,7 @@ public class BlacklistProcessor implements ModelProcessor {
                         blacklistData.getHttpMethod(),
                         blacklistData.getResourceClassName());
                 shouldAdd = false;
+                break;
             }
         }
 
