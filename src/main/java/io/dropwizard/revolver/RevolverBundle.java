@@ -62,6 +62,8 @@ import io.dropwizard.revolver.optimizer.config.OptimizerConfig;
 import io.dropwizard.revolver.persistence.AeroSpikePersistenceProvider;
 import io.dropwizard.revolver.persistence.InMemoryPersistenceProvider;
 import io.dropwizard.revolver.persistence.PersistenceProvider;
+import io.dropwizard.revolver.provider.BlacklistMethodData;
+import io.dropwizard.revolver.provider.BlacklistProcessor;
 import io.dropwizard.revolver.resource.*;
 import io.dropwizard.revolver.splitting.PathExpressionSplitConfig;
 import io.dropwizard.revolver.splitting.SplitConfig;
@@ -155,6 +157,8 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
     public abstract String getRevolverConfigAttribute();
 
     public abstract ConfigSource getConfigSource();
+
+    public abstract Set<BlacklistMethodData> getBlacklistData();
 
     public void onConfigChange(String configData) {
         log.info("Config changed! Override to propagate config changes to other bundles");
@@ -525,6 +529,9 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         environment.jersey().register(new RevolverConfigResource(dynamicConfigHandler));
         environment.jersey().register(new RevolverApiManageResource());
         environment.jersey().register(new RevolverCallbackResource(persistenceProvider, callbackHandler));
+
+        // Register blacklist processor
+        environment.jersey().register(new BlacklistProcessor(getBlacklistData()));
     }
 
     private void registerFilters(Environment environment) {
