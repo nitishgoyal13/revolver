@@ -23,7 +23,7 @@ public class BlacklistProcessor implements ModelProcessor {
 
     @Override
     public ResourceModel processResourceModel(final ResourceModel resourceModel, final Configuration configuration) {
-        if (blacklistMethods != null && blacklistMethods.isEmpty()) {
+        if (blacklistMethods == null || blacklistMethods.isEmpty()) {
             log.info("No API end-point to blacklist");
             return resourceModel;
         }
