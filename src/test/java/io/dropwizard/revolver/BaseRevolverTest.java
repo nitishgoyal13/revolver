@@ -58,6 +58,7 @@ import io.dropwizard.revolver.optimizer.RevolverConfigUpdater;
 import io.dropwizard.revolver.optimizer.config.OptimizerConfig;
 import io.dropwizard.revolver.optimizer.utils.OptimizerUtils;
 import io.dropwizard.revolver.persistence.InMemoryPersistenceProvider;
+import io.dropwizard.revolver.provider.BlacklistMethodData;
 import io.dropwizard.revolver.retry.RevolverApiRetryConfig;
 import io.dropwizard.revolver.splitting.PathExpressionSplitConfig;
 import io.dropwizard.revolver.splitting.RevolverHttpApiSplitConfig;
@@ -74,6 +75,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.List;
+import java.util.Set;
+
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.curator.framework.CuratorFramework;
@@ -384,6 +387,11 @@ public class BaseRevolverTest {
 
         @Override
         public ConfigSource getConfigSource() {
+            return null;
+        }
+
+        @Override
+        public Set<BlacklistMethodData> getBlacklistData() {
             return null;
         }
     };
