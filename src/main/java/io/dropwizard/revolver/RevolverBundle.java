@@ -529,6 +529,9 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
         environment.jersey().register(new RevolverConfigResource(dynamicConfigHandler));
         environment.jersey().register(new RevolverApiManageResource());
         environment.jersey().register(new RevolverCallbackResource(persistenceProvider, callbackHandler));
+        environment.jersey().register(
+                new RevolverRequestResource(environment.getObjectMapper(), MSG_PACK_OBJECT_MAPPER,
+                        persistenceProvider, callbackHandler, metrics, revolverConfig));
 
         // Register blacklist processor
         environment.jersey().register(new BlacklistProcessor(getBlacklistData()));
