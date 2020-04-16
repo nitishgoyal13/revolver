@@ -39,6 +39,7 @@ public class BlacklistProcessor implements ModelProcessor {
                     ? Resource.builder(resource)
                     : Resource.builder(resource.getPath());
 
+            // Add child resources with non-blacklisted child resource methods only
             childResources.forEach(childResource -> {
                     final Builder childResourceBuilder = Resource.builder(childResource.getPath());
                     childResource.getResourceMethods().stream()
