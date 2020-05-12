@@ -35,7 +35,6 @@ import io.dropwizard.revolver.util.HeaderUtil;
 import io.dropwizard.revolver.util.ResponseTransformationUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -52,7 +51,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

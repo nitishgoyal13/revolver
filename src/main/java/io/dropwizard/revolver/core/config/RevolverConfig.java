@@ -20,6 +20,7 @@ package io.dropwizard.revolver.core.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import io.dropwizard.Configuration;
+import io.dropwizard.revolver.core.config.resilience.ResilienceConfig;
 import io.dropwizard.revolver.discovery.ServiceResolverConfig;
 import io.dropwizard.revolver.optimizer.config.OptimizerConfig;
 import io.dropwizard.riemann.RiemannConfig;
@@ -107,11 +108,14 @@ public class RevolverConfig extends Configuration {
 
     private ServiceDiscoveryConfig serviceDiscoveryConfig;
 
+    private ResilienceConfig resilienceConfig;
+
     @Builder
     public RevolverConfig(ClientConfig clientConfig, RuntimeConfig global,
             ServiceResolverConfig serviceResolverConfig, String hystrixStreamPath,
             @Singular List<RevolverServiceConfig> services, MailBoxConfig mailBox,
-            OptimizerConfig optimizerConfig, ServiceDiscoveryConfig serviceDiscoveryConfig) {
+            OptimizerConfig optimizerConfig, ServiceDiscoveryConfig serviceDiscoveryConfig,
+            ResilienceConfig resilienceConfig) {
         this.clientConfig = clientConfig;
         this.global = global;
         this.serviceResolverConfig = serviceResolverConfig;
@@ -122,6 +126,7 @@ public class RevolverConfig extends Configuration {
         this.dynamicConfig = false;
         this.optimizerConfig = optimizerConfig;
         this.serviceDiscoveryConfig = serviceDiscoveryConfig;
+        this.resilienceConfig = resilienceConfig;
     }
 
 
@@ -134,5 +139,6 @@ public class RevolverConfig extends Configuration {
         this.dynamicConfig = false;
         this.configPollIntervalSeconds = 600;
         this.dynamicConfigUrl = null;
+        this.resilienceConfig = new ResilienceConfig();
     }
 }

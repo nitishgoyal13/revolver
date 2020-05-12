@@ -9,19 +9,14 @@ import lombok.NoArgsConstructor;
 /***
  Created by nitish.goyal on 29/03/19
  ***/
-@AllArgsConstructor
 @Data
 @Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class OptimizerMetrics {
 
     private Map<String, Number> metrics;
 
-    private AggregationAlgo aggregationAlgo;
-
-    public enum AggregationAlgo {
-        AVG, MAX
-    }
 }
 
 
