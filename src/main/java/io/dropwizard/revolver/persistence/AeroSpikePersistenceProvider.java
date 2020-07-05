@@ -23,29 +23,35 @@ import com.aerospike.client.Key;
 import com.aerospike.client.Operation;
 import com.aerospike.client.Record;
 import com.aerospike.client.policy.WritePolicy;
-import com.aerospike.client.query.*;
+import com.aerospike.client.query.Filter;
+import com.aerospike.client.query.IndexType;
+import com.aerospike.client.query.RecordSet;
+import com.aerospike.client.query.Statement;
 import com.aerospike.client.task.IndexTask;
+import com.collections.CollectionUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import io.dropwizard.revolver.aeroapike.AerospikeConnectionManager;
 import io.dropwizard.revolver.base.core.RevolverCallbackRequest;
 import io.dropwizard.revolver.base.core.RevolverCallbackResponse;
 import io.dropwizard.revolver.base.core.RevolverCallbackResponses;
 import io.dropwizard.revolver.base.core.RevolverRequestState;
 import io.dropwizard.revolver.core.config.AerospikeMailBoxConfig;
-import java.util.Arrays;
-import lombok.extern.slf4j.Slf4j;
-import org.glassfish.jersey.internal.util.collection.StringKeyIgnoreCaseMultivaluedMap;
-
+import io.vertx.core.MultiMap;
+import io.vertx.core.http.impl.headers.VertxHttpHeaders;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.glassfish.jersey.internal.util.collection.StringKeyIgnoreCaseMultivaluedMap;
 
 /**
  * @author phaneesh
@@ -60,21 +66,23 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
     private static final String DEFAULT_MAILBOX_ID = "NONE";
     private static final TypeReference<Map<String, List<String>>> headerAndQueryParamTypeReference = new TypeReference<Map<String, List<String>>>() {
     };
+    private static final TypeReference<MultiMap> multiMapTypeReference = new TypeReference<MultiMap>() {
+    };
     private final AerospikeMailBoxConfig mailBoxConfig;
     private final ObjectMapper objectMapper;
 
     public AeroSpikePersistenceProvider(AerospikeMailBoxConfig mailBoxConfig,
-            ObjectMapper objectMapper) {
+                                        ObjectMapper objectMapper) {
         this.mailBoxConfig = mailBoxConfig;
         this.objectMapper = objectMapper;
         try {
             IndexTask idxMailboxId = AerospikeConnectionManager.getClient()
-                    .createIndex(null, mailBoxConfig.getNamespace(), MAILBOX_SET_NAME,
-                            IDX_MAILBOX_ID, BinNames.MAILBOX_ID, IndexType.STRING);
+                    .createIndex(null, mailBoxConfig.getNamespace(), MAILBOX_SET_NAME, IDX_MAILBOX_ID,
+                            BinNames.MAILBOX_ID, IndexType.STRING);
             idxMailboxId.waitTillComplete();
             IndexTask idxMessageState = AerospikeConnectionManager.getClient()
-                    .createIndex(null, mailBoxConfig.getNamespace(), MAILBOX_SET_NAME,
-                            "idx_message_state", BinNames.STATE, IndexType.STRING);
+                    .createIndex(null, mailBoxConfig.getNamespace(), MAILBOX_SET_NAME, "idx_message_state",
+                            BinNames.STATE, IndexType.STRING);
             idxMessageState.waitTillComplete();
             IndexTask idxMailboxAuth = AerospikeConnectionManager.getClient()
                     .createIndex(null, mailBoxConfig.getNamespace(), MAILBOX_SET_NAME,
@@ -100,31 +108,40 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
         try {
             Bin service = new Bin(BinNames.SERVICE, request.getService());
             Bin api = new Bin(BinNames.API, request.getApi());
-            Bin mode = new Bin(BinNames.MODE, request.getMode().toUpperCase());
-            Bin method = new Bin(BinNames.METHOD,
-                    Strings.isNullOrEmpty(request.getMethod()) ? null
-                            : request.getMethod().toUpperCase());
+            Bin mode = new Bin(BinNames.MODE, request.getMode()
+                    .toUpperCase());
+            Bin method = new Bin(BinNames.METHOD, Strings.isNullOrEmpty(request.getMethod())
+                                                  ? null
+                                                  : request.getMethod()
+                                                          .toUpperCase());
             Bin path = new Bin(BinNames.PATH, request.getPath());
-            Bin mailBoxId = new Bin(BinNames.MAILBOX_ID,
-                    mailboxId == null ? DEFAULT_MAILBOX_ID : mailboxId);
-            Bin mailboxAuthIdBin = new Bin(BinNames.MAILBOX_AUTH_ID,
-                    mailboxAuthId == null ? mailBoxConfig.getDefaultMailboxAuthId() : mailboxAuthId);
-            Bin queryParams = new Bin(BinNames.QUERY_PARAMS,
-                    objectMapper.writeValueAsString(request.getQueryParams()));
+            Bin mailBoxId = new Bin(BinNames.MAILBOX_ID, mailboxId == null
+                                                         ? DEFAULT_MAILBOX_ID
+                                                         : mailboxId);
+            Bin mailboxAuthIdBin = new Bin(BinNames.MAILBOX_AUTH_ID, mailboxAuthId == null
+                                                                     ? mailBoxConfig.getDefaultMailboxAuthId()
+                                                                     : mailboxAuthId);
+            Bin queryParams = new Bin(BinNames.QUERY_PARAMS, objectMapper.writeValueAsString(request.getQueryParams()));
             Bin callbackUri = new Bin(BinNames.CALLBACK_URI, request.getCallbackUri());
             Bin requestHeaders = new Bin(BinNames.REQUEST_HEADERS,
                     objectMapper.writeValueAsString(request.getHeaders()));
+            Bin vertxRequestHeaders = new Bin(BinNames.VERTX_REQUEST_HEADERS,
+                    objectMapper.writeValueAsString(request.getVertxHeaders()));
             Bin requestBody = new Bin(BinNames.REQUEST_BODY, request.getBody());
-            Bin requestTime = new Bin(BinNames.REQUEST_TIME, Instant.now().toEpochMilli());
-            Bin created = new Bin(BinNames.CREATED, Instant.now().toEpochMilli());
-            Bin updated = new Bin(BinNames.UPDATED, Instant.now().toEpochMilli());
+            Bin requestTime = new Bin(BinNames.REQUEST_TIME, Instant.now()
+                    .toEpochMilli());
+            Bin created = new Bin(BinNames.CREATED, Instant.now()
+                    .toEpochMilli());
+            Bin updated = new Bin(BinNames.UPDATED, Instant.now()
+                    .toEpochMilli());
             Bin state = new Bin(BinNames.STATE, RevolverRequestState.RECEIVED.name());
-            WritePolicy wp = ttl <= 0 ? AerospikeConnectionManager.writePolicy
-                    : AerospikeConnectionManager.getWritePolicy(ttl);
+            WritePolicy wp = ttl <= 0
+                             ? AerospikeConnectionManager.writePolicy
+                             : AerospikeConnectionManager.getWritePolicy(ttl);
             AerospikeConnectionManager.getClient()
                     .put(wp, key, service, api, mode, method, path, mailBoxId, mailboxAuthIdBin, queryParams,
-                            callbackUri, requestHeaders, requestBody, requestTime, created, updated,
-                            state);
+                            callbackUri, requestHeaders, vertxRequestHeaders, requestBody, requestTime, created,
+                            updated, state);
             log.info("Mailbox Message saved. Key: {} | TTL: {}", requestId, ttl);
         } catch (JsonProcessingException e) {
             log.warn("Error encoding request", e);
@@ -360,28 +377,55 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
     }
 
     private RevolverCallbackRequest recordToRequest(Record record) {
-        Map<String, List<String>> headers = new HashMap<>();
-        Map<String, List<String>> queryParams = new HashMap<>();
+        Map<String, List<String>> headers = null;
+        MultiMap vertxHeaders = null;
+        Map<String, List<String>> queryParams = null;
         try {
             headers = objectMapper.readValue(record.getString(BinNames.REQUEST_HEADERS),
                     headerAndQueryParamTypeReference);
             queryParams = objectMapper.readValue(record.getString(BinNames.QUERY_PARAMS),
                     headerAndQueryParamTypeReference);
+            vertxHeaders = objectMapper.readValue(record.getString(BinNames.VERTX_REQUEST_HEADERS),
+                    multiMapTypeReference);
         } catch (IOException e) {
             log.warn("Error decoding response", e);
         }
+        if (headers == null) {
+            headers = new HashMap<>();
+        }
+        if (vertxHeaders == null) {
+            vertxHeaders = new VertxHttpHeaders();
+        }
+        if (queryParams == null) {
+            queryParams = new HashMap<>();
+        }
+        Map<String, List<String>> finalHeaders = headers;
+        vertxHeaders.forEach(entry -> {
+            List<String> values = finalHeaders.get(entry.getKey());
+            if (CollectionUtils.isEmpty(values)) {
+                values = Lists.newArrayList();
+                values.add(entry.getValue());
+            } else {
+                values.add(entry.getValue());
+            }
+        });
         Map<String, List<String>> headersKeyIgnoreCaseMap = new StringKeyIgnoreCaseMultivaluedMap<>();
         Map<String, List<String>> queryParamsKeyIgnoreCaseMap = new StringKeyIgnoreCaseMultivaluedMap<>();
         headers.forEach(headersKeyIgnoreCaseMap::put);
         queryParams.forEach(queryParamsKeyIgnoreCaseMap::put);
-        return RevolverCallbackRequest.builder().headers(headersKeyIgnoreCaseMap)
+        return RevolverCallbackRequest.builder()
+                .headers(headersKeyIgnoreCaseMap)
                 .api(record.getString(BinNames.API))
                 .callbackUri(record.getString(BinNames.CALLBACK_URI))
-                .body(record.getValue(BinNames.REQUEST_BODY) == null ? null
-                        : (byte[]) record.getValue(BinNames.REQUEST_BODY))
-                .method(record.getString(BinNames.METHOD)).mode(record.getString(BinNames.MODE))
-                .path(record.getString(BinNames.PATH)).queryParams(queryParamsKeyIgnoreCaseMap)
-                .service(record.getString(BinNames.SERVICE)).build();
+                .body(record.getValue(BinNames.REQUEST_BODY) == null
+                      ? null
+                      : (byte[]) record.getValue(BinNames.REQUEST_BODY))
+                .method(record.getString(BinNames.METHOD))
+                .mode(record.getString(BinNames.MODE))
+                .path(record.getString(BinNames.PATH))
+                .queryParams(queryParamsKeyIgnoreCaseMap)
+                .service(record.getString(BinNames.SERVICE))
+                .build();
     }
 
     private RevolverCallbackResponse recordToResponse(Record record) {
@@ -425,6 +469,7 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
         static final String QUERY_PARAMS = "query_params";
         static final String CALLBACK_URI = "callback_uri";
         static final String REQUEST_HEADERS = "req_headers";
+        static final String VERTX_REQUEST_HEADERS = "vertx_req_headers";
         static final String REQUEST_BODY = "req_body";
         static final String REQUEST_TIME = "req_time";
         static final String RESPONSE_HEADERS = "resp_headers";

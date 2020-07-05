@@ -18,6 +18,7 @@
 package io.dropwizard.revolver.base.core;
 
 
+import io.vertx.core.MultiMap;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -51,6 +52,8 @@ public class RevolverCallbackRequest {
     private String callbackUri;
 
     private Map<String, List<String>> headers;
+
+    private MultiMap vertxHeaders;
 
     private byte[] body;
 }
