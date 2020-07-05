@@ -406,18 +406,18 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
         MultiMap vertxHeaders = null;
         Map<String, List<String>> queryParams = null;
         try {
-            headers = objectMapper.readValue(record.getString(BinNames.REQUEST_HEADERS) == null
-                                             ? StringUtils.EMPTY
-                                             : record.getString(BinNames.REQUEST_HEADERS),
-                    headerAndQueryParamTypeReference);
-            queryParams = objectMapper.readValue(record.getString(BinNames.QUERY_PARAMS) == null
-                                                 ? StringUtils.EMPTY
-                                                 : record.getString(BinNames.QUERY_PARAMS),
-                    headerAndQueryParamTypeReference);
-            vertxHeaders = objectMapper.readValue(record.getString(BinNames.VERTX_REQUEST_HEADERS) == null
-                                                  ? StringUtils.EMPTY
-                                                  : record.getString(BinNames.VERTX_REQUEST_HEADERS),
-                    multiMapTypeReference);
+            if (StringUtils.isNotEmpty(record.getString(BinNames.REQUEST_HEADERS))) {
+                headers = objectMapper.readValue(record.getString(BinNames.REQUEST_HEADERS),
+                        headerAndQueryParamTypeReference);
+            }
+            if (StringUtils.isNotEmpty(record.getString(BinNames.QUERY_PARAMS))) {
+                queryParams = objectMapper.readValue(record.getString(BinNames.QUERY_PARAMS),
+                        headerAndQueryParamTypeReference);
+            }
+            if (StringUtils.isNotEmpty(record.getString(BinNames.VERTX_REQUEST_HEADERS))) {
+                vertxHeaders = objectMapper.readValue(record.getString(BinNames.VERTX_REQUEST_HEADERS),
+                        multiMapTypeReference);
+            }
         } catch (IOException e) {
             log.warn("Error decoding response", e);
         }
