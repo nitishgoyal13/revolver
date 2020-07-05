@@ -32,7 +32,6 @@ import io.dropwizard.revolver.base.core.RevolverCallbackResponse;
 import io.dropwizard.revolver.base.core.RevolverRequestState;
 import io.dropwizard.revolver.callback.InlineCallbackHandler;
 import io.dropwizard.revolver.core.config.ApiLatencyConfig;
-import io.dropwizard.revolver.core.config.RevolverConfig;
 import io.dropwizard.revolver.core.config.RevolverConfigHolder;
 import io.dropwizard.revolver.core.tracing.TraceInfo;
 import io.dropwizard.revolver.http.RevolverHttpCommand;
@@ -57,6 +56,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
@@ -378,8 +378,10 @@ public class RevolverRequestResource {
             HttpHeaders headers, UriInfo uriInfo, byte[] body,
             MultivaluedHashMap<String, String> sanatizedHeaders) throws TimeoutException {
         return httpCommand.execute(RevolverHttpRequest.builder().traceInfo(TraceInfo.builder()
-                .requestId(headers.getHeaderString(RevolversHttpHeaders.REQUEST_ID_HEADER))
-                .transactionId(headers.getHeaderString(RevolversHttpHeaders.TXN_ID_HEADER))
+                .requestId(UUID.randomUUID()
+                        .toString())
+                .transactionId(UUID.randomUUID()
+                        .toString())
                 .timestamp(System.currentTimeMillis()).build()).api(api.getApi()).service(service)
                 .path(path).method(method).headers(sanatizedHeaders)
                 .queryParams(uriInfo.getQueryParameters()).body(body).build());

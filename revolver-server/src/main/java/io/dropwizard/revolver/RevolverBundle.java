@@ -92,6 +92,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.curator.framework.CuratorFramework;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 /**
@@ -512,26 +513,35 @@ public abstract class RevolverBundle<T extends Configuration> implements Configu
                 .registerSubtypes(new NamedType(AerospikeMailBoxConfig.class, "aerospike"));
     }
 
-
-    private void registerResources(Environment environment, MetricRegistry metrics,
-            PersistenceProvider persistenceProvider, InlineCallbackHandler callbackHandler,
-            DynamicConfigHandler dynamicConfigHandler) {
-        environment.jersey().register(
-                new RevolverRequestResource(environment.getObjectMapper(), MSG_PACK_OBJECT_MAPPER,
-                        persistenceProvider, callbackHandler, metrics, revolverConfigHolder));
-        environment.jersey()
+    private void registerResources(Environment environment,
+                                   MetricRegistry metrics,
+                                   PersistenceProvider persistenceProvider,
+                                   InlineCallbackHandler callbackHandler,
+                                   DynamicConfigHandler dynamicConfigHandler) {
+        RevolverRequestResource revolverRequestResource = new RevolverRequestResource(environment.getObjectMapper(),
+                MSG_PACK_OBJECT_MAPPER, persistenceProvider, callbackHandler, metrics, revolverConfigHolder);
+        /*environment.jersey()
+                .register(revolverRequestResource);*/
+        ApiServlet apiServlet = new ApiServlet(revolverRequestResource);
+        ServletHolder holder = new ServletHolder(apiServlet);
+        environment.getApplicationContext()
+                .addServlet(holder, "/apis/*");
+        /*environment.jersey()
                 .register(new RevolverCallbackResource(persistenceProvider, callbackHandler));
-        environment.jersey().register(new RevolverMetadataResource(revolverConfigHolder));
-        environment.jersey().register(
-                new RevolverMailboxResource(persistenceProvider, environment.getObjectMapper(),
+        environment.jersey()
+                .register(new RevolverMetadataResource(revolverConfigHolder));
+        environment.jersey()
+                .register(new RevolverMailboxResource(persistenceProvider, environment.getObjectMapper(),
                         MSG_PACK_OBJECT_MAPPER, Collections.unmodifiableMap(apiConfig)));
-        environment.jersey().register(
-                new RevolverMailboxResourceV2(persistenceProvider, environment.getObjectMapper(),
+        environment.jersey()
+                .register(new RevolverMailboxResourceV2(persistenceProvider, environment.getObjectMapper(),
                         MSG_PACK_OBJECT_MAPPER, Collections.unmodifiableMap(apiConfig)));
 
-        environment.jersey().register(new RevolverConfigResource(dynamicConfigHandler));
+        environment.jersey()
+                .register(new RevolverConfigResource(dynamicConfigHandler));
 
-        environment.jersey().register(new RevolverApiManageResource());
+        environment.jersey()
+                .register(new RevolverApiManageResource());*/
 
     }
 
