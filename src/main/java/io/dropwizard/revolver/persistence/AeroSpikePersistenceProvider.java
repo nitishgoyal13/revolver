@@ -128,7 +128,7 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
             Bin callbackUri = new Bin(BinNames.CALLBACK_URI, request.getCallbackUri());
             Bin requestHeaders = new Bin(BinNames.REQUEST_HEADERS,
                     objectMapper.writeValueAsString(request.getHeaders()));
-            Bin vertxRequestHeaders = new Bin(BinNames.VERTX_REQUEST_HEADERS,
+            Bin vertxHeaders = new Bin(BinNames.VERTX_HEADERS,
                     objectMapper.writeValueAsString(request.getVertxHeaders()));
             Bin requestBody = new Bin(BinNames.REQUEST_BODY, request.getBody());
             Bin requestTime = new Bin(BinNames.REQUEST_TIME, Instant.now()
@@ -143,8 +143,8 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
                              : AerospikeConnectionManager.getWritePolicy(ttl);
             AerospikeConnectionManager.getClient()
                     .put(wp, key, service, api, mode, method, path, mailBoxId, mailboxAuthIdBin, queryParams,
-                            callbackUri, requestHeaders, vertxRequestHeaders, requestBody, requestTime, created,
-                            updated, state);
+                            callbackUri, requestHeaders, vertxHeaders, requestBody, requestTime, created, updated,
+                            state);
             log.info("Mailbox Message saved. Key: {} | TTL: {}", requestId, ttl);
         } catch (JsonProcessingException e) {
             log.warn("Error encoding request", e);
@@ -414,9 +414,8 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
                 queryParams = objectMapper.readValue(record.getString(BinNames.QUERY_PARAMS),
                         headerAndQueryParamTypeReference);
             }
-            if (StringUtils.isNotEmpty(record.getString(BinNames.VERTX_REQUEST_HEADERS))) {
-                vertxHeaders = objectMapper.readValue(record.getString(BinNames.VERTX_REQUEST_HEADERS),
-                        multiMapTypeReference);
+            if (StringUtils.isNotEmpty(record.getString(BinNames.VERTX_HEADERS))) {
+                vertxHeaders = objectMapper.readValue(record.getString(BinNames.VERTX_HEADERS), multiMapTypeReference);
             }
         } catch (IOException e) {
             log.warn("Error decoding response", e);
@@ -506,7 +505,7 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
         static final String QUERY_PARAMS = "query_params";
         static final String CALLBACK_URI = "callback_uri";
         static final String REQUEST_HEADERS = "req_headers";
-        static final String VERTX_REQUEST_HEADERS = "vertx_req_headers";
+        static final String VERTX_HEADERS = "vertx_headers";
         static final String REQUEST_BODY = "req_body";
         static final String REQUEST_TIME = "req_time";
         static final String RESPONSE_HEADERS = "resp_headers";
