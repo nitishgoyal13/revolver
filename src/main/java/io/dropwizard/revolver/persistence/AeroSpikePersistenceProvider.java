@@ -403,8 +403,9 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
 
     private RevolverCallbackRequest recordToRequest(Record record) {
         Map<String, List<String>> headers = null;
-        MultiMap vertxHeaders = null;
+        MultiMap vertxHeaders = new VertxHttpHeaders();
         Map<String, List<String>> queryParams = null;
+        MultiMap finalVertxHeaders = vertxHeaders;
         try {
             if (StringUtils.isNotEmpty(record.getString(BinNames.REQUEST_HEADERS))) {
                 headers = objectMapper.readValue(record.getString(BinNames.REQUEST_HEADERS),
@@ -415,7 +416,9 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
                         headerAndQueryParamTypeReference);
             }
             if (StringUtils.isNotEmpty(record.getString(BinNames.VERTX_HEADERS))) {
-                vertxHeaders = objectMapper.readValue(record.getString(BinNames.VERTX_HEADERS), multiMapTypeReference);
+                Map<String, String> tempHeaders = objectMapper.readValue(record.getString(BinNames.VERTX_HEADERS),
+                        mapTypeReference);
+                tempHeaders.forEach(finalVertxHeaders::add);
             }
         } catch (IOException e) {
             log.warn("Error decoding response", e);
@@ -423,15 +426,16 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
         if (headers == null) {
             headers = new HashMap<>();
         }
-        if (vertxHeaders == null) {
-            vertxHeaders = new VertxHttpHeaders();
-        }
         if (queryParams == null) {
             queryParams = new HashMap<>();
         }
+        if (finalVertxHeaders == null) {
+            finalVertxHeaders = new VertxHttpHeaders();
+        }
         Map<String, List<String>> finalHeaders = headers;
-        vertxHeaders.forEach(entry -> {
+        finalVertxHeaders.forEach(entry -> {
             List<String> values = finalHeaders.get(entry.getKey());
+            log.info("Key : {}, Value : {}", entry.getKey(), entry.getValue());
             if (CollectionUtils.isEmpty(values)) {
                 values = Lists.newArrayList();
                 values.add(entry.getValue());
