@@ -67,6 +67,8 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
     private static final String DEFAULT_MAILBOX_ID = "NONE";
     private static final TypeReference<Map<String, List<String>>> headerAndQueryParamTypeReference = new TypeReference<Map<String, List<String>>>() {
     };
+    private static final TypeReference<Map<String, String>> mapTypeReference = new TypeReference<Map<String, String>>() {
+    };
     private static final TypeReference<MultiMap> multiMapTypeReference = new TypeReference<MultiMap>() {
     };
     private final AerospikeMailBoxConfig mailBoxConfig;
@@ -128,8 +130,8 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
             Bin callbackUri = new Bin(BinNames.CALLBACK_URI, request.getCallbackUri());
             Bin requestHeaders = new Bin(BinNames.REQUEST_HEADERS,
                     objectMapper.writeValueAsString(request.getHeaders()));
-            Bin vertxHeaders = new Bin(BinNames.VERTX_HEADERS,
-                    objectMapper.writeValueAsString(request.getVertxHeaders()));
+            Bin vertxHeaders = new Bin(BinNames.VERTX_HEADERS, request.getVertxHeaders()
+                    .toString());
             Bin requestBody = new Bin(BinNames.REQUEST_BODY, request.getBody());
             Bin requestTime = new Bin(BinNames.REQUEST_TIME, Instant.now()
                     .toEpochMilli());
@@ -418,7 +420,9 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
             if (StringUtils.isNotEmpty(record.getString(BinNames.VERTX_HEADERS))) {
                 Map<String, String> tempHeaders = objectMapper.readValue(record.getString(BinNames.VERTX_HEADERS),
                         mapTypeReference);
-                tempHeaders.forEach(finalVertxHeaders::add);
+                if (tempHeaders != null) {
+                    tempHeaders.forEach(finalVertxHeaders::add);
+                }
             }
         } catch (IOException e) {
             log.warn("Error decoding response", e);
