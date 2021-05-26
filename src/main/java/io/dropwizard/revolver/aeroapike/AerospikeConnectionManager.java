@@ -111,9 +111,13 @@ public class AerospikeConnectionManager {
                 .map(h -> {
                     String[] host = h.split(":");
                     if (host.length == 2) {
-                        return new Host(host[0], Integer.parseInt(host[1]));
+                        return Strings.isNullOrEmpty(aerospikeConfig.getTlsName())
+                               ? new Host(host[0], Integer.parseInt(host[1]))
+                               : new Host(host[0], aerospikeConfig.getTlsName(), Integer.parseInt(host[1]));
                     } else {
-                        return new Host(host[0], 3000);
+                        return Strings.isNullOrEmpty(aerospikeConfig.getTlsName())
+                               ? new Host(host[0], 3000)
+                               : new Host(host[0], aerospikeConfig.getTlsName(), 3000);
                     }
                 })
                 .toArray(Host[]::new));
