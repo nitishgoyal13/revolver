@@ -143,8 +143,7 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
                              : AerospikeConnectionManager.getWritePolicy(ttl);
             AerospikeConnectionManager.getClient()
                     .put(wp, key, service, api, mode, method, path, mailBoxId, mailboxAuthIdBin, queryParams,
-                            callbackUri, requestHeaders, vertxHeaders, requestBody, requestTime, created, updated,
-                            state);
+                            callbackUri, requestHeaders, requestBody, requestTime, created, updated, state);
             log.info("Mailbox Message saved. Key: {} | TTL: {}", requestId, ttl);
         } catch (JsonProcessingException e) {
             log.warn("Error encoding request", e);
