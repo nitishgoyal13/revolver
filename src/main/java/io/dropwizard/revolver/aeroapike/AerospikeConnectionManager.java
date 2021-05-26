@@ -25,18 +25,19 @@ import com.aerospike.client.policy.CommitLevel;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.ReadModeAP;
 import com.aerospike.client.policy.Replica;
+import com.aerospike.client.policy.TlsPolicy;
 import com.aerospike.client.policy.WritePolicy;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import io.dropwizard.revolver.core.config.AerospikeMailBoxConfig;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 /**
  * @author phaneesh
@@ -98,15 +99,24 @@ public class AerospikeConnectionManager {
         clientPolicy.connPoolsPerNode = config.getMaxConnectionsPerNode();
         clientPolicy.sharedThreadPool = true;
 
-        val hosts = config.getHosts().split(",");
-        client = new AerospikeClient(clientPolicy, Arrays.stream(hosts).map(h -> {
-            String[] host = h.split(":");
-            if (host.length == 2) {
-                return new Host(host[0], Integer.parseInt(host[1]));
-            } else {
-                return new Host(host[0], 3000);
-            }
-        }).toArray(Host[]::new));
+        if (!Strings.isNullOrEmpty(aerospikeConfig.getTlsName())) {
+            clientPolicy.tlsPolicy = new TlsPolicy();
+            clientPolicy.user = aerospikeConfig.getUser();
+            clientPolicy.password = aerospikeConfig.getPassword();
+        }
+
+        val hosts = config.getHosts()
+                .split(",");
+        client = new AerospikeClient(clientPolicy, Arrays.stream(hosts)
+                .map(h -> {
+                    String[] host = h.split(":");
+                    if (host.length == 2) {
+                        return new Host(host[0], Integer.parseInt(host[1]));
+                    } else {
+                        return new Host(host[0], 3000);
+                    }
+                })
+                .toArray(Host[]::new));
         log.info("Aerospike connection status: " + client.isConnected());
     }
 
