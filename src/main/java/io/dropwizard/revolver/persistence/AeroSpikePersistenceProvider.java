@@ -130,8 +130,6 @@ public class AeroSpikePersistenceProvider implements PersistenceProvider {
             Bin callbackUri = new Bin(BinNames.CALLBACK_URI, request.getCallbackUri());
             Bin requestHeaders = new Bin(BinNames.REQUEST_HEADERS,
                     objectMapper.writeValueAsString(request.getHeaders()));
-            Bin vertxHeaders = new Bin(BinNames.VERTX_HEADERS, request.getVertxHeaders()
-                    .toString());
             Bin requestBody = new Bin(BinNames.REQUEST_BODY, request.getBody());
             Bin requestTime = new Bin(BinNames.REQUEST_TIME, Instant.now()
                     .toEpochMilli());
